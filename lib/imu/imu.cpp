@@ -110,6 +110,16 @@ void IMU::printRates()
   Serial.print("\n");
 }
 
+float IMU::getRollRate()
+{
+  return rateRoll_;
+}
+
+float IMU::getPitchRate()
+{
+  return ratePitch_;
+}
+
 void IMU::calibrate()
 {
   calibrateGyro();

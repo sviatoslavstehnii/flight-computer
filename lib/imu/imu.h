@@ -13,6 +13,10 @@ class IMU {
 
     void getEvent();
 
+    void calibrate();
+    void calibrateGyro();
+    void calibrateAccel();
+
 
   public:
     IMU() = default;
@@ -31,9 +35,8 @@ class IMU {
     void updateRates();
     void printRates();
 
-    void calibrate();
-    void calibrateGyro();
-    void calibrateAccel();
+    float getRollRate();
+    float getPitchRate();
 
 };
 
