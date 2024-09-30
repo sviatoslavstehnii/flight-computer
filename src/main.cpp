@@ -3,9 +3,11 @@
 #include <Wire.h>
 
 // custom libs
-#include <imu.h>
+#include "imu.h"
+#include "barometer.h"
 
 IMU imu{};
+Barometer baro{};
 
 // ============================================================
 
@@ -14,13 +16,16 @@ void setup() {
   Serial.begin(9600);
   while (!Serial)
     delay(10);
-  imu.setup();
+  // imu.setup();
+  baro.setup();
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  imu.updateRates();
-  imu.printRates();
+  // imu.updateRates();
+  // imu.printRates();
+
+  baro.printAltitide();
   delay(500);
 }
 
