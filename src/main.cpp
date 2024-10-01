@@ -2,12 +2,11 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-// custom libs
-#include "imu.h"
-#include "barometer.h"
+// main lib
+#include "FCMS.h"
 
 IMU imu{};
-Barometer baro{};
+BMP280 baro{};
 
 // ============================================================
 
@@ -25,7 +24,7 @@ void loop() {
   // imu.updateRates();
   // imu.printRates();
 
-  baro.printAltitide();
+  baro.printAltitude();
   delay(500);
 }
 

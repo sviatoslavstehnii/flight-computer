@@ -1,6 +1,6 @@
-#include "barometer.h"
+#include "bmp280.h"
 
-void Barometer::setup()
+void BMP280::setup()
 {
   if (!bmp_.begin(0x76)) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring or "
@@ -14,27 +14,32 @@ void Barometer::setup()
                   Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                   Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                   Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
+
+  calibrate();
 }
 
-void Barometer::calibrate()
+void BMP280::calibrate()
 {
-  Serial.print("Calibrating barometer...");
+  Serial.print("Calibrating BMP280...");
   size_t n = 0;
-  for (size_t i = 0; i < 2000; ++i) {
+  for (size_t i = 0; i < 500; ++i) {
     if (bmp_.takeForcedMeasurement()) {
-      altitudeCalibration_ += bmp_.readAltitude(1013.25);
+      altitudeCalibration_ += bmp_.readAltitude();
       ++n;
     }
     delay(1);
   }
 
   altitudeCalibration_ /= n;
+
+  Serial.print("clibr: ");
+  Serial.println(altitudeCalibration_);
 }
 
-void Barometer::printAltitide()
+void BMP280::printAltitude()
 {
   if (bmp_.takeForcedMeasurement()) {
-    altitude_ = bmp_.readAltitude(1013.25) - altitudeCalibration_;
+    altitude_ = bmp_.readAltitude() - altitudeCalibration_;
     Serial.print(F("Approx altitude = "));
     Serial.print(altitude_);
     Serial.println(" m\n");
@@ -44,7 +49,10 @@ void Barometer::printAltitide()
 
 }
 
-float Barometer::getAltitude()
+float BMP280::getAltitude()
 {
+  if (bmp_.takeForcedMeasurement()) {
+    altitude_ = bmp_.readAltitude() - altitudeCalibration_;
+  }
   return altitude_;
 }
