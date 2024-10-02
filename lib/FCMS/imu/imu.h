@@ -1,21 +1,21 @@
-#include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
-
 
 class IMU {
   private:
-    Adafruit_MPU6050 imu_;
-    sensors_event_t a_, g_, temp_;
-    float rateRoll_ = 0.0;
-    float ratePitch_ = 0.0;
-    float rateCalibrationRoll_ = 0.0;
-    float rateCalibrationPitch_ = 0.0;
+    float accX_, accY_, accZ_;
+    float accXCalibration_, accYCalibration_, accZCalibration_;
 
-    void getEvent();
+    float roll_ = 0;
+    float pitch_ = 0;
+    float yaw_ = 0;
+
+    float rollCalibration_ = 0;
+    float pitchCalibration_ = 0;
+    float yawCalibration_ = 0;
+
 
     void calibrate();
     void calibrateGyro();
-    void calibrateAccel();
+    void calibrateAccel(float xc, float yc, float zc);
 
 
   public:
@@ -27,16 +27,17 @@ class IMU {
 
     void setup();
 
-    void printData();
+    void update();
+    void updateAccel();
+    void updateGyro();
+
     void printGyroData();
     void printAccelData();
-    void printTempData();
-
-    void updateRates();
-    void printRates();
 
     float getRollRate();
     float getPitchRate();
+    float getYawRate();
+
 
 };
 
