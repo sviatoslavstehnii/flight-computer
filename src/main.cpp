@@ -1,5 +1,4 @@
 #if 0
-
 // open-source libs
 #include <Arduino.h>
 #include <Wire.h>
@@ -17,13 +16,13 @@ void setup() {
   Serial.begin(9600);
   while (!Serial)
     delay(10);
-  // imu.setup();
+  imu.setup();
   // baro.setup();  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  // imu.updateRates();
+  imu.updateRates();
   // imu.printRates();
 
   // baro.printAltitude();
@@ -31,11 +30,10 @@ void loop() {
 
   delay(500);
 }
-
+#endif 
 // ============================================================
 
 
-#endif
 
 // Test code for Adafruit GPS modules using MTK3329/MTK3339 driver
 //
