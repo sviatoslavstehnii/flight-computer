@@ -1,4 +1,4 @@
-
+#include <Wire.h>
 class IMU {
   private:
     float accX_, accY_, accZ_;
