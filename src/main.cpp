@@ -1,33 +1,64 @@
-
-
+#include <Wire.h>
 #include "FCMS.h"
 
-Flash mem{};
+uint32_t delayPeriod = 20;
+uint32_t now;
+uint32_t then;
+
+IMU imu;
 
 void setup() {
   Serial.begin(115200);
- 
-  while (!Serial) ;
   delay(100);
-  
-  mem.setup();
 
-  String data = "hello world!";
-  mem.write(0, data);
+  Wire.begin();
+  imu.setup();
 
-  Serial.print("Write: ");
-  Serial.println(data);
+  now = 0;
+  then = 0;
+}
 
-  String data_from_mem;
-  if (mem.read(0,data_from_mem)) {
-    Serial.print("Readed from flash chip: ");
-    Serial.println(data_from_mem);
+void loop() {
+  now = millis();
+
+  if (now - then >= delayPeriod) {
+    imu.update();
+    imu.printAccelData();
+    then = now;
   }
 }
+
+
+
+
+// #include "FCMS.h"
+
+// Flash mem{};
+
+// void setup() {
+//   Serial.begin(115200);
  
-void loop() {
+//   while (!Serial) ;
+//   delay(100);
+  
+//   mem.setup();
+
+//   String data = "hello world!";
+//   mem.write(0, data);
+
+//   Serial.print("Write: ");
+//   Serial.println(data);
+
+//   String data_from_mem;
+//   if (mem.read(0,data_from_mem)) {
+//     Serial.print("Readed from flash chip: ");
+//     Serial.println(data_from_mem);
+//   }
+// }
  
-}
+// void loop() {
+ 
+// }
 
 
 
