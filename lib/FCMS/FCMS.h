@@ -2,6 +2,7 @@
 #include "barometer/bmp180.h"
 #include "imu/imu.h"
 #include "flash/flash.h"
+#include "gps/gps.h"
 
 // FCMS lib
 // Flight Computer Managment System 
