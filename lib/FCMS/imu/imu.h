@@ -16,7 +16,8 @@ class IMU {
     void calibrate();
     void calibrateGyro();
     void calibrateAccel(float xc, float yc, float zc);
-
+    
+    bool flightMode;
 
   public:
     IMU() = default;
@@ -38,6 +39,6 @@ class IMU {
     float getPitchRate();
     float getYawRate();
 
-
+    void detectTakeoff();
+    void enterFlightMode();
 };
-

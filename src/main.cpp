@@ -1,32 +1,33 @@
-// #include <Wire.h>
-// #include "FCMS.h"
+#include <Wire.h>
+#include "FCMS.h"
 
-// uint32_t delayPeriod = 20;
-// uint32_t now;
-// uint32_t then;
+uint32_t delayPeriod = 500;
+uint32_t now;
+uint32_t then;
 
-// IMU imu;
+IMU imu;
 
-// void setup() {
-//   Serial.begin(115200);
-//   delay(100);
+void setup() {
+  Serial.begin(115200);
+  delay(50);
 
-//   Wire.begin();
-//   imu.setup();
+  Wire.begin();
+  imu.setup();
 
-//   now = 0;
-//   then = 0;
-// }
+  now = 0;
+  then = 0;
+}
 
-// void loop() {
-//   now = millis();
+void loop() {
+  now = millis();
 
-//   if (now - then >= delayPeriod) {
-//     imu.update();
-//     imu.printAccelData();
-//     then = now;
-//   }
-// }
+  if (now - then >= delayPeriod) {
+    imu.update();
+    imu.printAccelData();
+    imu.printGyroData();
+    then = now;
+  }
+}
 
 
 
@@ -161,20 +162,20 @@
 //   }
 // }
 
-#include "FCMS.h"
+// #include "FCMS.h"
 
-GPS gps(&Serial1);
+// GPS gps(&Serial1);
 
-void setup() {
-  Serial.begin(115200);
-  gps.setup();
-}
+// void setup() {
+//   Serial.begin(115200);
+//   gps.setup();
+// }
 
-void loop() {
-  if (gps.readAndParse()) {
-    Serial.print("Location: ");
-    Serial.print(gps.getLatitude(), 4);
-    Serial.print(", ");
-    Serial.print(gps.getLongitude(), 4);
-  }
-}
+// void loop() {
+//   if (gps.readAndParse()) {
+//     Serial.print("Location: ");
+//     Serial.print(gps.getLatitude(), 4);
+//     Serial.print(", ");
+//     Serial.print(gps.getLongitude(), 4);
+//   }
+// }
