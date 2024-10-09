@@ -3,6 +3,7 @@
 #include "imu/imu.h"
 #include "flash/flash.h"
 #include "gps/gps.h"
+#include "sdmc/sdmc.h"
 
 // FCMS lib
 // Flight Computer Managment System 
