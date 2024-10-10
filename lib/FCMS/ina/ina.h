@@ -11,6 +11,8 @@ class INA219Lib {
     float getShuntVoltage();
     float getCurrent();
     float getPower();
+    void setupINA();
+    float printINA();
 
   private:
     uint8_t _i2cAddr;
