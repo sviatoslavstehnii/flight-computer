@@ -1,8 +1,5 @@
 #include "FCMS.h"
 
-FCMS::FCMS()
-{
-}
 
 void FCMS::setState(STATE state)
 {

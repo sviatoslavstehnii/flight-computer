@@ -1,29 +1,38 @@
-#include <Arduino.h>
+#include <SPI.h>
+#include <SPIFlash.h>
+#include <Wire.h>
 #include "FCMS.h"
 
-INA219Lib ina219;
+Flash mem{10};
 
 void setup() {
   Serial.begin(115200);
-  
-  if (!ina219.begin()) {
-    Serial.println("INA219 initialization failed!");
-    while (1);
-  }
-  
-  Serial.println("INA219 initialized successfully!");
+  while(!Serial);
+
+  mem.setup(16777216, true);
+
+  // data should end with \n and be shorter than 100
+  char data1[] = "123456";
+  char data2[] = "aboba1bboj";
+  char data3[] = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor";
+
+  char readData[1000] = "";
+  mem.writeToCJ(data1, sizeof(data1));
+  mem.writeToCJ(data2, sizeof(data2));
+  mem.writeToCJ(data3, sizeof(data3));
+
+
+  delay(100);
+
+  mem.readCJ(readData, 1000);
+  Serial.println(readData);
+  Serial.println("end");
+
 }
+
+
 void loop() {
-  float busVoltage = ina219.getBusVoltage(); 
-  float shuntVoltage = ina219.getShuntVoltage();
-  float current = ina219.getCurrent();
-  float power = ina219.getPower();
-
-  Serial.print("Bus Voltage: "); Serial.print(busVoltage); Serial.println(" V");
-  Serial.print("Shunt Voltage: "); Serial.print(shuntVoltage); Serial.println(" mV");
-  Serial.print("Current: "); Serial.print(current); Serial.println(" mA");
-  Serial.print("Power: "); Serial.print(power); Serial.println(" mW");
-  Serial.println();
-
-  delay(2000);
+  // Your code here
 }
+
+

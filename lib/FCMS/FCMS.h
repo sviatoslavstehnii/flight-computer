@@ -26,7 +26,7 @@ class FCMS {
 
     STATE curr_state_;
   public:
-    FCMS();
+    FCMS(): flash_(10) {};
     ~FCMS() = default;
 
     void setState(STATE state);
