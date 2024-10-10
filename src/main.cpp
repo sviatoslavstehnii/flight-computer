@@ -18,7 +18,9 @@ void setup() {
 
   char readData[1000] = "";
   mem.writeToCJ(data1, sizeof(data1));
+  delay(100);
   mem.writeToCJ(data2, sizeof(data2));
+  delay(100);
   mem.writeToCJ(data3, sizeof(data3));
 
 

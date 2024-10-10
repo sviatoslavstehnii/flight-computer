@@ -37,73 +37,45 @@ void Flash::partition(size_t capacity)
 void Flash::write(uint32_t addr, const void *buf, uint16_t len)
 {
   flash_.writeBytes(addr, buf, len);
+}
 
+bool Flash::writeToPartition(char *buf, size_t len, size_t &curr, size_t end)
+{
+  if (len >= 100) {
+    Serial.println("Buffer should be shorter than 100 chars");
+    return false;
+  }
+
+  // Add newline char
+  size_t new_l = len + 1;
+  char new_buf[new_l];
+  memcpy(new_buf, buf, len);
+  new_buf[len-1] = '\n';  
+  new_buf[len] = '\0'; 
+
+  if (curr >= end) {
+    return false;
+  }
+
+
+  write(curr, new_buf, new_l);
+  curr += new_l; 
+  return true;
 }
 
 bool Flash::writeToMEJ(char *buf, size_t len)
 {
-  if ( len >= 100 ) {
-    Serial.println("Buffer should be shorter than 100 chars");
-    return false;
-  }
-  // add \n
-  size_t new_l = len + 1;
-  char new_buf[new_l];
-  memcpy(new_buf, buf, len);
-  new_buf[len-1] = '\n';
-  new_buf[len] = '\0';
-
-
-  if ( MEJ_curr_ >= MEJ_end_ ) {
-    return false;
-  }
-  write(MEJ_curr_, new_buf, new_l);
-  MEJ_curr_ += new_l;
-  return true;
+  return writeToPartition(buf, len, MEJ_curr_, MEJ_end_);
 }
 
 bool Flash::writeToCJ(char *buf, size_t len)
 {
-  if ( len >= 100 ) {
-    Serial.println("Buffer should be shorter than 100 chars");
-    return false;
-  }
-  // add \n
-  size_t new_l = len + 1;
-  char new_buf[new_l];
-  memcpy(new_buf, buf, len);
-  new_buf[len-1] = '\n';
-  new_buf[len] = '\0';
-
-
-  if ( CJ_curr_ >= CJ_end_ ) {
-    return false;
-  }
-  write(CJ_curr_, new_buf, new_l);
-  CJ_curr_ += new_l;
-  return true;
+  return writeToPartition(buf, len, CJ_curr_, CJ_end_);
 }
 
 bool Flash::writeToDJ(char *buf, size_t len)
 {
-  if ( len >= 100 ) {
-    Serial.println("Buffer should be shorter than 100 chars");
-    return false;
-  }
-  // add \n
-  size_t new_l = len + 1;
-  char new_buf[new_l];
-  memcpy(new_buf, buf, len);
-  new_buf[len-1] = '\n';
-  new_buf[len] = '\0';
-
-
-  if ( DJ_curr_ >= DJ_end_ ) {
-    return false;
-  }
-  write(DJ_curr_, new_buf, new_l);
-  DJ_curr_ += len;
-  return new_l;
+  return writeToPartition(buf, len, DJ_curr_, DJ_end_);
 }
 
 void Flash::read(uint32_t addr, void *buf, uint16_t len)
@@ -111,96 +83,52 @@ void Flash::read(uint32_t addr, void *buf, uint16_t len)
   flash_.readBytes(addr, buf, len);
 }
 
-void Flash::readMEJ(void *buf, uint16_t len)
+bool Flash::readFromPartition(void *buf, uint16_t len, size_t start)
 {
-  char mej_data[len] = "";
-  if ( len < 100 ) {
+  char data[len] = "";
+  if (len < 100) {
     Serial.println("You should read at least 100 bytes.");
-    return;
+    return false;
   }
+
   size_t offset = 0;
   size_t chunk_sz = 100;
+
   while (true) {
     char temp_buf[chunk_sz];
-    read(MEJ_start_+offset, temp_buf, chunk_sz);
+    read(start + offset, temp_buf, chunk_sz);
     size_t temp_sz = strlen(temp_buf);
 
-    if ( temp_sz == 0 || temp_buf[temp_sz-1] != '\n') {
-      break;
-    }
-    
-    if ( strlen(mej_data)+temp_sz >= len ) { 
+    if (temp_sz == 0 || temp_buf[temp_sz - 1] != '\n') {
       break;
     }
 
-    memcpy(mej_data+strlen(mej_data), temp_buf, temp_sz);
+    if (strlen(data) + temp_sz >= len) {
+      break;
+    }
 
-    offset += temp_sz+1;
+    memcpy(data + strlen(data), temp_buf, temp_sz);
+
+    offset += temp_sz + 1;
   }
 
-  memcpy(buf, mej_data, strlen(mej_data));
+  memcpy(buf, data, strlen(data));
+  return true;
+}
+
+void Flash::readMEJ(void *buf, uint16_t len)
+{
+  readFromPartition(buf, len, MEJ_start_);
 }
 
 void Flash::readCJ(void *buf, uint16_t len)
 {
-
-  char cj_data[len] = "";
-  if ( len < 100 ) {
-    Serial.println("You should read at least 100 bytes.");
-    return;
-  }
-  size_t offset = 0;
-  size_t chunk_sz = 100;
-  while (true) {
-    char temp_buf[chunk_sz];
-    read(CJ_start_+offset, temp_buf, chunk_sz);
-    size_t temp_sz = strlen(temp_buf);
-
-    if ( temp_sz == 0 || temp_buf[temp_sz-1] != '\n') {
-      break;
-    }
-    
-    if ( strlen(cj_data)+temp_sz >= len ) { 
-      break;
-    }
-
-    memcpy(cj_data+strlen(cj_data), temp_buf, temp_sz);
-
-    offset += temp_sz+1;
-  }
-
-  memcpy(buf, cj_data, strlen(cj_data));
+  readFromPartition(buf, len, CJ_start_);
 }
 
 void Flash::readDJ(void *buf, uint16_t len)
 {
-
-  char dj_data[len] = "";
-  if ( len < 100 ) {
-    Serial.println("You should read at least 100 bytes.");
-    return;
-  }
-  size_t offset = 0;
-  size_t chunk_sz = 100;
-  while (true) {
-    char temp_buf[chunk_sz];
-    read(DJ_start_+offset, temp_buf, chunk_sz);
-    size_t temp_sz = strlen(temp_buf);
-
-    if ( temp_sz == 0 || temp_buf[temp_sz-1] != '\n') {
-      break;
-    }
-    
-    if ( strlen(dj_data)+temp_sz >= len ) { 
-      break;
-    }
-
-    memcpy(dj_data+strlen(dj_data), temp_buf, temp_sz);
-
-    offset += temp_sz+1;
-  }
-
-  memcpy(buf, dj_data, strlen(dj_data));
+  readFromPartition(buf, len, DJ_start_);
 }
 
 void Flash::clear()

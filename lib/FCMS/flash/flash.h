@@ -19,8 +19,12 @@ class Flash {
     size_t DJ_end_ = 0;
 
     void partition(size_t capacity);
+    
     void write(uint32_t addr, const void *buf, uint16_t len);
+    bool writeToPartition(char *buf, size_t len, size_t &curr, size_t end);
+
     void read(uint32_t addr, void *buf, uint16_t len);
+    bool readFromPartition(void *buf, uint16_t len, size_t start);
     
   public:
     Flash(size_t chipSelect): flash_(chipSelect) {};
