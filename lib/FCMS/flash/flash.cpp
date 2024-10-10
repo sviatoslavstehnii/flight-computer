@@ -83,7 +83,7 @@ void Flash::read(uint32_t addr, void *buf, uint16_t len)
   flash_.readBytes(addr, buf, len);
 }
 
-bool Flash::readFromPartition(void *buf, uint16_t len, size_t start)
+bool Flash::readFromPartition(char *buf, size_t len, size_t start)
 {
   char data[len] = "";
   if (len < 100) {
@@ -116,19 +116,19 @@ bool Flash::readFromPartition(void *buf, uint16_t len, size_t start)
   return true;
 }
 
-void Flash::readMEJ(void *buf, uint16_t len)
+void Flash::readMEJ(char *buf, size_t len, size_t bytes_skip)
 {
-  readFromPartition(buf, len, MEJ_start_);
+  readFromPartition(buf, len, MEJ_start_+bytes_skip);
 }
 
-void Flash::readCJ(void *buf, uint16_t len)
+void Flash::readCJ(char *buf, size_t len, size_t bytes_skip)
 {
-  readFromPartition(buf, len, CJ_start_);
+  readFromPartition(buf, len, CJ_start_+bytes_skip);
 }
 
-void Flash::readDJ(void *buf, uint16_t len)
+void Flash::readDJ(char *buf, size_t len, size_t bytes_skip)
 {
-  readFromPartition(buf, len, DJ_start_);
+  readFromPartition(buf, len, DJ_start_+bytes_skip);
 }
 
 void Flash::clear()
