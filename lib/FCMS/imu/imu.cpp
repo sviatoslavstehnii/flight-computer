@@ -27,7 +27,7 @@ void IMU::setup()
   Wire.write(0x8);
   Wire.endTransmission();
 
-  calibrate();
+  // calibrate();
 }
 
 
@@ -60,17 +60,27 @@ void IMU::printAccelData()
 
 float IMU::getRollRate()
 {
-  return roll_ - rollCalibration_;
+  return rollRate_;
 }
 
 float IMU::getPitchRate()
 {
-  return pitch_ - pitchCalibration_;
+  return pitchRate_;
 }
 
 float IMU::getYawRate()
 {
-  return yaw_ - yawCalibration_;
+  return yawRate_;
+}
+
+float IMU::getAngleRoll()
+{
+  return angleRoll_;
+}
+
+float IMU::getAnglePitch()
+{
+  return anglePitch_;
 }
 
 void IMU::calibrate()
@@ -86,9 +96,9 @@ void IMU::calibrateGyro()
 {
   for (size_t i = 0; i < 2000; ++i) {
     updateGyro();
-    rollCalibration_ += roll_;
-    pitchCalibration_ += pitch_;
-    yawCalibration_ += yaw_;
+    rollCalibration_ += rollRate_;
+    pitchCalibration_ += pitchRate_;
+    yawCalibration_ += yawRate_;
     delay(1);
   }
 
@@ -130,6 +140,9 @@ void IMU::updateAccel()
   accX_ = static_cast<float>(AccXLBS) / 4096.0 + accXCalibration_;
   accY_ = static_cast<float>(AccYLBS) / 4096.0 + accYCalibration_;
   accZ_ = static_cast<float>(AccZLBS) / 4096.0 + accZCalibration_;
+
+  anglePitch_ = 180 * atan2(accX_, sqrt(accY_*accY_ + accZ_*accZ_))/PI;
+  angleRoll_ = 180 * atan2(accY_, sqrt(accX_*accX_ + accZ_*accZ_))/PI;
 }
 
 void IMU::updateGyro()
@@ -144,9 +157,9 @@ void IMU::updateGyro()
   int16_t GyroY = Wire.read() << 8 | Wire.read();
   int16_t GyroZ = Wire.read() << 8 | Wire.read();
 
-  roll_ = static_cast<float>(GyroX) / 65.5;
-  pitch_ = static_cast<float>(GyroY) / 65.5;
-  yaw_ = static_cast<float>(GyroZ) / 65.5;
+  rollRate_ = static_cast<float>(GyroX) / 65.5 - rollCalibration_; 
+  pitchRate_ = static_cast<float>(GyroY) / 65.5 - pitchCalibration_;
+  yawRate_ = static_cast<float>(GyroZ) / 65.5 - yawCalibration_;
 }
 
 void IMU::detectTakeoff() {
@@ -161,7 +174,7 @@ void IMU::detectTakeoff() {
   }
 
   // Check for strong rotational changes
-  if (abs(roll_) > gyroThreshold || abs(pitch_) > gyroThreshold || abs(yaw_) > gyroThreshold) {
+  if (abs(rollRate_) > gyroThreshold || abs(pitchRate_) > gyroThreshold || abs(yawRate_) > gyroThreshold) {
     Serial.println("Takeoff detected based on gyroscope data!");
     enterFlightMode();
   }

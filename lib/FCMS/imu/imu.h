@@ -4,9 +4,12 @@ class IMU {
     float accX_, accY_, accZ_;
     float accXCalibration_, accYCalibration_, accZCalibration_;
 
-    float roll_ = 0;
-    float pitch_ = 0;
-    float yaw_ = 0;
+    float rollRate_ = 0;
+    float pitchRate_ = 0;
+    float yawRate_ = 0;
+
+    float angleRoll_ = 0;
+    float anglePitch_ = 0;
 
     float rollCalibration_ = 0;
     float pitchCalibration_ = 0;
@@ -38,6 +41,9 @@ class IMU {
     float getRollRate();
     float getPitchRate();
     float getYawRate();
+
+    float getAngleRoll();
+    float getAnglePitch();
 
     void detectTakeoff();
     void enterFlightMode();
