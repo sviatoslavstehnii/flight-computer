@@ -57,6 +57,19 @@ void IMU::printAccelData()
   Serial.println("");
 }
 
+void IMU::printScaledAccelData()
+{
+  Serial.print("AccelX:");
+  Serial.print(accX_cal_);
+  Serial.print(",");
+  Serial.print("AccelY:");
+  Serial.print(accY_cal_);
+  Serial.print(",");
+  Serial.print("AccelZ:");
+  Serial.print(accZ_cal_);
+  Serial.println("");
+}
+
 
 float IMU::getRollRate()
 {
@@ -79,7 +92,7 @@ void IMU::calibrate()
 
   calibrateGyro();
   // calibrateAccel(0.0, 0.0, 0.0);
-  calibrateAccel(-0.052074, 0.026193, 0.223160);
+  calibrateAccel(0.052074, -0.026193, -0.223160);
 }
 
 void IMU::calibrateGyro()
@@ -127,9 +140,13 @@ void IMU::updateAccel()
   int16_t AccYLBS = Wire.read() << 8 | Wire.read();
   int16_t AccZLBS = Wire.read() << 8 | Wire.read();
 
-  accX_ = static_cast<float>(AccXLBS) / 4096.0 + accXCalibration_;
-  accY_ = static_cast<float>(AccYLBS) / 4096.0 + accYCalibration_;
-  accZ_ = static_cast<float>(AccZLBS) / 4096.0 + accZCalibration_;
+  accX_ = static_cast<float>(AccXLBS) / 4096.0 - accXCalibration_;
+  accY_ = static_cast<float>(AccYLBS) / 4096.0 - accYCalibration_;
+  accZ_ = static_cast<float>(AccZLBS) / 4096.0 - accZCalibration_;
+
+  accX_cal_ = 1.003195 * accX_ + 0.001268 * accY_ + 0.001367 * accZ_;
+  accY_cal_ = 0.001268 * accX_ + 0.993899 * accY_ - 0.000891 * accZ_;
+  accZ_cal_ = 0.001367 * accX_ - 0.000891 * accY_ + 0.977694 * accZ_;
 }
 
 void IMU::updateGyro()
