@@ -144,6 +144,7 @@ void IMU::updateAccel()
 
   anglePitch_ = 180 * atan2(accX_, sqrt(accY_*accY_ + accZ_*accZ_))/PI;
   angleRoll_ = 180 * atan2(accY_, sqrt(accX_*accX_ + accZ_*accZ_))/PI;
+
 }
 
 void IMU::updateGyro()
