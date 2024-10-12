@@ -9,10 +9,10 @@ class KalmanFilter {
     float uncertaintyAngleRoll_ = 4;
     float uncertaintyAnglePitch_ = 4;
 
-    float dt_ = 0.004;
+    float dt_;
 
   public:
-    KalmanFilter() = default;
+    KalmanFilter(float dt): dt_{dt} {};
     ~KalmanFilter() = default;
 
     KalmanFilter(const KalmanFilter&) = delete;

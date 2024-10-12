@@ -3,6 +3,7 @@ class IMU {
   private:
     float accX_, accY_, accZ_;
     float accXCalibration_, accYCalibration_, accZCalibration_;
+    float accX_cal_, accY_cal_, accZ_cal_;
 
     float rollRate_ = 0;
     float pitchRate_ = 0;
@@ -37,6 +38,7 @@ class IMU {
 
     void printGyroData();
     void printAccelData();
+    void printScaledAccelData();
 
     float getRollRate();
     float getPitchRate();

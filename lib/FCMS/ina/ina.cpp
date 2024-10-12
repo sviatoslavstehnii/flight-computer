@@ -43,3 +43,48 @@ int16_t INA219Lib::read16(uint8_t reg) {
   }
   return 0xFFFF;
 }
+
+void INA219Lib::setupINA() {
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println("INA219 test");
+
+  INA219Lib ina;
+  if (!ina.begin()) {
+    Serial.println("Failed to find INA219 chip");
+    while (1);
+  }
+  Serial.println("Found INA219 chip");
+}
+
+float INA219Lib::printINA() {
+  INA219Lib ina;
+  if (!ina.begin()) {
+    Serial.println("Failed to find INA219 chip");
+    while (1);
+  }
+  Serial.println("Found INA219 chip");
+
+  float shuntVoltage = ina.getShuntVoltage();
+  float busVoltage = ina.getBusVoltage();
+  float current = ina.getCurrent();
+  float power = ina.getPower();
+
+  Serial.print("Bus Voltage: ");
+  Serial.print(busVoltage);
+  Serial.println(" V");
+
+  Serial.print("Shunt Voltage: ");
+  Serial.print(shuntVoltage);
+  Serial.println(" mV");
+
+  Serial.print("Current: ");
+  Serial.print(current);
+  Serial.println(" mA");
+
+  Serial.print("Power: ");
+  Serial.print(power);
+  Serial.println(" mW");
+
+  return power;
+}

@@ -42,63 +42,7 @@
 #include <FCMS.h>
 
 IMU imu{};
-KalmanFilter kf{};
-
-float phi_rad = 0;
-float theta_rad = 0;
-
-float P[4];
-float Q[2];
-float R[3];
-
-void init(float Pinit, float * Qinit, float *Rinit) {
-  P[0] = Pinit; P[1] = 0.0f;
-  P[2] = Pinit; P[3] = 0.0f;
-
-  Q[0] = Qinit[0]; Q[1] = Qinit[1];
-  R[0] = Rinit[0]; R[1] = Rinit[1]; R[2] = Rinit[2];
-}
-
-
-void predict(float p, float q, float r, float T) {
-    // Update state estimate (phi and theta angles)
-    float sp = sin(phi_rad);
-    float cp = cos(phi_rad);
-    float tt = tan(theta_rad);
-
-    // Update the angles using the gyroscope data (p, q, r)
-    phi_rad = phi_rad + T * (p + tt * (q * sp + r * cp));
-    theta_rad = theta_rad + T * (q * cp - r * sp);
-
-    // Recalculate trigonometric terms
-    sp = sin(phi_rad);
-    cp = cos(phi_rad);
-    float st = sin(theta_rad);
-    float ct = cos(theta_rad);
-
-    // Calculate the Jacobian matrix A based on the linearization of the system
-    float A[4] = {
-        tt * (q * cp - r * sp),   // A[0,0]
-        (r * cp + q * sp) * (tt * tt + 1.0f),  // A[0,1]
-        -(r * cp + q * sp),       // A[1,0]
-        0.0f                      // A[1,1]
-    };
-
-    // Initialize Ptmp for the predicted covariance matrix
-    float Ptmp[4] = {
-        T * (Q[0] + 2.0f * A[0] * P[0] + A[1] * P[1] + A[1] * P[2]),
-        T * (A[0] * P[1] + A[2] * P[0] + A[1] * P[3] + A[3] * P[2]),
-        T * (A[0] * P[1] + A[2] * P[0] + A[1] * P[3] + A[3] * P[2]),
-        T * (Q[1] + A[2] * P[1] + A[2] * P[1] + 2.0f * A[3] * P[3])
-    };
-
-    // Store the updated covariance back in P
-    P[0] = Ptmp[0];
-    P[1] = Ptmp[1];
-    P[2] = Ptmp[2];
-    P[3] = Ptmp[3];
-}
-
+KalmanFilter kf{0.004};
 
 
 void setup() {
@@ -111,20 +55,23 @@ void setup() {
 
   imu.setup();
   delay(1000);
+
+  delay(100);
 }
 
 uint32_t loopTimer =0;
 void loop() {
 
   imu.update();
-  // kf.updateRoll(imu.getRollRate(), imu.getAngleRoll());
-  // kf.updatePitch(imu.getPitchRate(), imu.getAnglePitch());
 
-  // Serial.print("pitch: ");
-  // Serial.print(kf.getAnglePitch());
-  // Serial.print(", ");
-  // Serial.print("roll: ");
-  // Serial.println(kf.getAngleRoll());
+  kf.updateRoll(imu.getRollRate(), imu.getAngleRoll());
+  kf.updatePitch(imu.getPitchRate(), imu.getAnglePitch());
+
+  Serial.print("pitch: ");
+  Serial.print(kf.getAnglePitch());
+  Serial.print(", ");
+  Serial.print("roll: ");
+  Serial.println(kf.getAngleRoll());
 
   while(micros() - loopTimer < 4000)
   loopTimer = micros();
