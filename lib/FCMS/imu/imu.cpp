@@ -27,7 +27,7 @@ void IMU::setup()
   Wire.write(0x8);
   Wire.endTransmission();
 
-  // calibrate();
+  calibrate();
 }
 
 
@@ -88,8 +88,9 @@ void IMU::calibrate()
   Serial.print("Calibrating imu...");
 
   calibrateGyro();
-  // calibrateAccel(0.0, 0.0, 0.0);
-  calibrateAccel(-0.052074, 0.026193, 0.223160);
+  // calibrateAccel(-0.052074, 0.026193, 0.223160);
+  calibrateAccel(-0.03, -0.01, 0.14);
+
 }
 
 void IMU::calibrateGyro()

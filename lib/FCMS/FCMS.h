@@ -1,6 +1,7 @@
 #include "barometer/bmp280.h"
 #include "barometer/bmp180.h"
 #include "imu/imu.h"
+#include "imu/kalman_filter.h"
 #include "flash/flash.h"
 #include "gps/gps.h"
 #include "sdmc/sdmc.h"

@@ -38,30 +38,11 @@
 // }
 
 
-
 #include <Arduino.h>
 #include <FCMS.h>
 
 IMU imu{};
-float KalmanAngleRoll = 0;
-float KalmanUncertaintyAngleRoll = 4;
-
-float KalmanAnglePitch = 0;
-float KalmanUncertaintyAnglePitch = 4;
-
-float Kalman1DOutput[] = {0, 0};
-
-void kalman_1d(float KalmanState, float KalmanUncertianty,
- float KalmanInput, float KalmanMeasurment) {
-  KalmanState = KalmanState + 0.004*KalmanInput;
-  KalmanUncertianty = KalmanUncertianty + 0.004 * 0.004 * 4 * 4;
-  float KalmanGain = KalmanUncertianty * 1/(1*KalmanUncertianty + 3*3);
-  KalmanState = KalmanState + KalmanGain* (KalmanMeasurment - KalmanState);
-  KalmanUncertianty = (1-KalmanGain)*KalmanUncertianty;
-
-  Kalman1DOutput[0] = KalmanState;
-  Kalman1DOutput[1] = KalmanUncertianty;
- }
+KalmanFilter kf{};
 
 
 void setup() {
@@ -80,22 +61,16 @@ uint32_t loopTimer =0;
 void loop() {
 
   imu.update();
+  kf.updateRoll(imu.getRollRate(), imu.getAngleRoll());
+  kf.updatePitch(imu.getPitchRate(), imu.getAnglePitch());
 
-  // kalman_1d(KalmanAngleRoll, KalmanUncertaintyAngleRoll,
-  //  imu.getRollRate(), imu.getAngleRoll());
-  // KalmanAngleRoll = Kalman1DOutput[0];
-  // KalmanUncertaintyAngleRoll = Kalman1DOutput[1];
+  Serial.print("pitch: ");
+  Serial.print(kf.getAnglePitch());
+  Serial.print(", ");
+  Serial.print("roll: ");
+  Serial.println(kf.getAngleRoll());
 
-  // kalman_1d(KalmanAnglePitch, KalmanUncertaintyAnglePitch,
-  //  imu.getPitchRate(), imu.getAnglePitch());
-  // KalmanAnglePitch = Kalman1DOutput[0];
-  // KalmanUncertaintyAnglePitch = Kalman1DOutput[1];
-    
-  Serial.print("Angle roll: ");
-  Serial.println(imu.getAngleRoll());
-
-  Serial.print("Rate roll: ");
-  Serial.println(imu.getRollRate());
-  while( micros() - loopTimer  < 4000);
-  loopTimer = micros(); 
+  while(micros() - loopTimer < 4000)
+  loopTimer = micros();
 }
+
