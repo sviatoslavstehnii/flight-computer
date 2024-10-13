@@ -7,6 +7,11 @@
 #include "sdmc/sdmc.h"
 #include "ina/ina.h"
 
+#include <sstream>
+#include <iomanip>
+
+
+
 // FCMS lib
 // Flight Computer Managment System 
 enum STATE {
@@ -22,13 +27,18 @@ enum STATE {
 class FCMS {
   private:
     IMU imu_;
+    KalmanFilter kf_;
     BMP280 baro_;
     Flash flash_;
 
     STATE curr_state_;
+
+    float pitch_ = 0; float roll_ = 0;
   public:
-    FCMS(): flash_(10) {};
+    FCMS(): flash_(10), kf_(0.004) {};
     ~FCMS() = default;
+
+    void setup();
 
     void setState(STATE state);
     bool nextState();
