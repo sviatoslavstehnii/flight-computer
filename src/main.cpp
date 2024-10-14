@@ -1,8 +1,10 @@
 
 #include <Arduino.h>
-#include <FCMS.h>
+// #include <FCMS.h>
+#include <StaticFireStand.h>
 
-FCMS fcms{};
+// FCMS fcms{};
+StaticFireStand sfs{};
 
 void setup() {
   Serial.begin(115200);
@@ -12,7 +14,7 @@ void setup() {
 
   delay(200);
 
-  fcms.setup();
+  sfs.setup();
   delay(1000);
 }
 
@@ -20,14 +22,14 @@ uint32_t loopTimer = 0;
 uint32_t commitTimer = 0; 
 
 void loop() {
-  fcms.navigate();
+  sfs.monitor();
 
   if (millis() - commitTimer >= 1000) {
-    fcms.commit();
+    // sfs.commit();
     commitTimer = millis();
   }
 
-  while (micros() - loopTimer < 4000);
-  loopTimer = micros();
+  // while (micros() - loopTimer < 4000);
+  // loopTimer = micros();
 }
 
