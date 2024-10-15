@@ -1,4 +1,5 @@
-
+#ifndef KALMANFILTER_H
+#define KALMANFILTER_H
 
 class KalmanFilter {
 
@@ -24,3 +25,5 @@ class KalmanFilter {
     float getAngleRoll();
     float getAnglePitch();
 };
+
+#endif

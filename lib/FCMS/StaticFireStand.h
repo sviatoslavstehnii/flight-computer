@@ -1,11 +1,7 @@
 #ifndef STATICFIRESTAND_H
 #define STATICFIRESTAND_H
 
-#include "flash/flash.h"
-#include "loadcell/loadcell.h"
-#include "ina/ina.h"
-#include "pyro/pyro.h"
-#include "sdmc/sdmc.h"
+#include "FCMS.h"
 
 #include <sstream>
 #include <iomanip>
@@ -14,10 +10,10 @@
 
 // StaticFireStand lib
 enum SFS_STATE {
-  SAFE=0,
-  IDLE=1,
-  STATIC_FIRE=2,
-  BURNOUT=3
+  SFS_SAFE=0,
+  SFS_IDLE=1,
+  SFS_STATIC_FIRE=2,
+  SFS_BURNOUT=3
 };
 
 struct SFS_DATA {
@@ -36,7 +32,7 @@ class StaticFireStand {
     SFS_DATA data_points_[250]{};
     int data_index_ = 0;
   public:
-    StaticFireStand(): flash_(10), curr_state_(SAFE), loadcell_(), pyro_(-1111) {};
+    StaticFireStand(): flash_(10), curr_state_(SFS_SAFE), loadcell_(), pyro_(-1111) {};
     ~StaticFireStand() = default;
 
     void setup();

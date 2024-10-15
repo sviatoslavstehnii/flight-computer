@@ -1,3 +1,6 @@
+#ifndef SDMC_H
+#define SDMC_H
+
 #include <SD.h>
 
 // Secure Digital Memory Card (SD)
@@ -15,7 +18,9 @@ class SDMC {
     void setup();
 
     bool write(const char * filename, const char * text);
-    bool read(const char * filname);
+    bool read(const char * filename);  // fixed typo: "filname" to "filename"
 
     void remove(const char * path);
 };
+
+#endif // SDMC_H

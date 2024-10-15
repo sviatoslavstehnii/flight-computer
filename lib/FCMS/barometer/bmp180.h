@@ -1,3 +1,6 @@
+#ifndef BMP180_H
+#define BMP180_H
+
 #include <Adafruit_BMP085.h>
 
 #include "barometer.h"
@@ -26,3 +29,5 @@ class BMP180: Barometer {
     float getAltitude() override;
   
 };
+
+#endif

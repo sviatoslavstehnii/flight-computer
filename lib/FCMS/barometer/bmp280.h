@@ -1,9 +1,11 @@
+#ifndef BMP280_H
+#define BMP280_H
 #include <Adafruit_BMP280.h>
 
 #include "barometer.h"
 
 
-class BMP280: Barometer {
+class BMP280 {
   private:
     Adafruit_BMP280 bmp_;
     float altitude_ = 0.0;
@@ -19,9 +21,11 @@ class BMP280: Barometer {
     BMP280(const BMP280&) = delete;
     BMP280& operator=(const BMP280&) = delete;
 
-    void setup() override;
+    void setup() ;
 
-    void printAltitude() override;
-    float getAltitude() override;
+    void printAltitude();
+    float getAltitude();
   
 };
+
+#endif

@@ -1,26 +1,25 @@
 #include "barometer/bmp280.h"
-#include "barometer/bmp180.h"
 #include "imu/imu.h"
 #include "imu/kalman_filter.h"
 #include "flash/flash.h"
 #include "gps/gps.h"
 #include "sdmc/sdmc.h"
-#include "ina/ina.h"
+#include "pyro/pyro.h"
+#include "loadcell/loadcell.h"
 
 #include <sstream>
 #include <iomanip>
 
 
-
 // FCMS lib
 // Flight Computer Managment System 
-enum STATE {
-  SAFE=0,
-  IDLE=1,
-  FLIGHT=2,
-  DESCENT=3,
-  LANDING=4,
-  LANDED=5
+enum FC_STATE {
+  FC_SAFE=0,
+  FC_IDLE=1,
+  FC_FLIGHT=2,
+  FC_DESCENT=3,
+  FC_LANDING=4,
+  FC_LANDED=5
 };
 
 
@@ -31,7 +30,7 @@ class FCMS {
     BMP280 baro_;
     Flash flash_;
 
-    STATE curr_state_;
+    FC_STATE curr_state_;
 
     float pitch_ = 0; float roll_ = 0;
   public:
@@ -40,11 +39,10 @@ class FCMS {
 
     void setup();
 
-    void setState(STATE state);
+    void setState(FC_STATE FC_state);
     bool nextState();
-    STATE getState();
+    FC_STATE getState();
 
-    // TODO: implement below methods
 
     // updates some variables related to IMU, barometer and gps
     void navigate();

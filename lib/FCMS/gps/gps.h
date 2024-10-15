@@ -1,4 +1,5 @@
-
+#ifndef GPS_H
+#define GPS_H
 
 #include <Adafruit_GPS.h>
 
@@ -26,3 +27,4 @@ class GPS {
     
 };
 
+#endif

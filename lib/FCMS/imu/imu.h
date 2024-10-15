@@ -1,4 +1,8 @@
+#ifndef IMU_H
+#define IMU_H
+
 #include <Wire.h>
+
 class IMU {
   private:
     float accX_, accY_, accZ_;
@@ -15,7 +19,6 @@ class IMU {
     float rollCalibration_ = 0;
     float pitchCalibration_ = 0;
     float yawCalibration_ = 0;
-
 
     void calibrate();
     void calibrateGyro();
@@ -50,3 +53,5 @@ class IMU {
     void detectTakeoff();
     void enterFlightMode();
 };
+
+#endif // IMU_H

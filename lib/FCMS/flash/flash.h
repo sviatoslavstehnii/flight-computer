@@ -1,3 +1,8 @@
+
+#ifndef FLASH_H
+#define FLASH_H
+
+
 #include <SPI.h>
 #include <SPIFlash.h>
 #include <Wire.h>
@@ -48,3 +53,5 @@ class Flash {
 
 
 };
+
+#endif // FLASH_H

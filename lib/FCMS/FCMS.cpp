@@ -17,7 +17,7 @@ void FCMS::setup()
   }
 }
 
-void FCMS::setState(STATE state)
+void FCMS::setState(FC_STATE state)
 {
   curr_state_ = state;
 }
@@ -25,13 +25,13 @@ void FCMS::setState(STATE state)
 bool FCMS::nextState()
 {
   if (curr_state_ < 5) {
-    curr_state_ = static_cast<STATE>(static_cast<int>(curr_state_) + 1);;
+    curr_state_ = static_cast<FC_STATE>(static_cast<int>(curr_state_) + 1);;
     return true;
   }
   return false;
 }
 
-STATE FCMS::getState()
+FC_STATE FCMS::getState()
 {
   return curr_state_;
 }
@@ -47,11 +47,11 @@ void FCMS::navigate()
   roll_ = kf_.getAngleRoll();
 
   // print for debug
-  // Serial.print("pitch: ");
-  // Serial.print(pitch_);
-  // Serial.print(", ");
-  // Serial.print("roll: ");
-  // Serial.println(roll_);
+  Serial.print("pitch: ");
+  Serial.print(pitch_);
+  Serial.print(", ");
+  Serial.print("roll: ");
+  Serial.println(roll_);
 }
 
 void FCMS::commit()
@@ -70,7 +70,7 @@ void FCMS::commit()
   flash_.writeToDJ(buf, sizeof(buf));
 
   
-  flash_.readDJ(readData, 1000);
-  Serial.print("Data Journal: ");
-  Serial.println(readData);
+  // flash_.readDJ(readData, 1000);
+  // Serial.print("Data Journal: ");
+  // Serial.println(readData);
 }
