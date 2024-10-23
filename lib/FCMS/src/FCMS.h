@@ -1,3 +1,5 @@
+#ifndef FCMS_H
+#define FCMS_H
 #include "barometer/bmp280.h"
 #include "imu/imu.h"
 #include "imu/kalman_filter.h"
@@ -52,3 +54,6 @@ class FCMS {
 
 
 };
+
+
+#endif
