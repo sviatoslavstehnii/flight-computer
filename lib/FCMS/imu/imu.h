@@ -48,5 +48,6 @@ class IMU {
     float getAnglePitch();
 
     void detectTakeoff();
+    void detectLanding();
     void enterFlightMode();
 };
