@@ -181,17 +181,14 @@ void IMU::updateGyro()
 }
 
 void IMU::detectTakeoff() {
-  // Thresholds for vibration detection
-  const float accelThreshold = 2.0; // Adjust this value based on testing
-  const float gyroThreshold = 200.0; // For detecting strong rotational changes
+  const float accelThreshold = 2.0;
+  const float gyroThreshold = 200.0;
 
-  // Check for strong acceleration
-  if (abs(accX_) > accelThreshold || abs(accY_) > accelThreshold || abs(accZ_) > accelThreshold) {
+  if (abs(accX_cal_) > accelThreshold || abs(accY_cal_) > accelThreshold || abs(accZ_cal_) > accelThreshold) {
     Serial.println("Takeoff detected based on acceleration!");
     enterFlightMode();
   }
 
-  // Check for strong rotational changes
   if (abs(rollRate_) > gyroThreshold || abs(pitchRate_) > gyroThreshold || abs(yawRate_) > gyroThreshold) {
     Serial.println("Takeoff detected based on gyroscope data!");
     enterFlightMode();
@@ -200,6 +197,5 @@ void IMU::detectTakeoff() {
 
 void IMU::enterFlightMode() {
   Serial.println("Entering flight mode...");
-  // Implement any mode changes here, e.g., adjusting sensor readings or control behavior.
-  flightMode = true; // Add a boolean variable to track flight state
+  flightMode = true;
 }
