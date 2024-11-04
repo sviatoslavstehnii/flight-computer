@@ -9,7 +9,7 @@ class BMP280: Barometer {
     Adafruit_BMP280 bmp_;
     float altitude_ = 0.0;
     float altitudeCalibration_ = 0.0;
-    
+
     float maxapogee = -FLT_MAX;
 
     void calibrate();
@@ -28,7 +28,7 @@ class BMP280: Barometer {
 
     void printAltitude() override;
     float getAltitude() override;
-    void apogeeDetection();
+    void detectApogee();
 
 
 };

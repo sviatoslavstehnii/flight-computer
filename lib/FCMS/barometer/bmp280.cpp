@@ -24,7 +24,7 @@ void BMP280::update()
 {
     if (bmp_.takeForcedMeasurement()) {
         printAltitude();
-        apogeeDetection();
+        detectApogee();
     }
 }
 
@@ -77,7 +77,7 @@ float BMP280::getAltitude()
   return altitude_;
 }
 
-void BMP280::apogeeDetection()
+void BMP280::detectApogee()
 {
     // static float lastAltitude = 0;
     static float maxAltitude = -FLT_MAX;
