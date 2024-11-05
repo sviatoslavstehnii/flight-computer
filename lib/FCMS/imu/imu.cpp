@@ -189,14 +189,19 @@ void IMU::detectTakeoff() {
 
   if (abs(accX_cal_) > accelThreshold || abs(accY_cal_) > accelThreshold || abs(accZ_cal_) > accelThreshold) {
     Serial.println("Takeoff detected based on acceleration!");
-    enterFlightMode();
+    takeoffDetected = true;
   }
 
   if (abs(rollRate_) > gyroThreshold || abs(pitchRate_) > gyroThreshold || abs(yawRate_) > gyroThreshold) {
     Serial.println("Takeoff detected based on gyroscope data!");
-    enterFlightMode();
+    takeoffDetected = true;
   }
 }
+
+float IMU::getAccelX() {
+    return accX_cal_;
+}
+
 
 // void IMU::detectLanding() {
 //   const float accelThreshold = 2.0;
@@ -212,12 +217,4 @@ void IMU::detectTakeoff() {
 //     flightMode = false;
 //   }
 // }
-
-
-
-void IMU::enterFlightMode() {
-  Serial.println("Entering flight mode...");
-  flightMode = true;
-}
-
 

@@ -50,4 +50,9 @@ class IMU {
     void detectTakeoff();
     void detectLanding();
     void enterFlightMode();
+
+    float getAccelX();
+
+    bool takeoffDetected = false;
+    bool landingDetected = false;
 };

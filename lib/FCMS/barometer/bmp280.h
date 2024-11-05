@@ -16,6 +16,8 @@ class BMP280: Barometer {
 
   
   public:
+    bool apogeeDetected = false;
+
     BMP280() = default;
     ~BMP280() = default;
 

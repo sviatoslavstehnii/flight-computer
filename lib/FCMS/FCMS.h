@@ -15,13 +15,17 @@
 // FCMS lib
 // Flight Computer Managment System 
 enum STATE {
-  SAFE=0,
-  IDLE=1,
-  FLIGHT=2,
-  DESCENT=3,
-  LANDING=4,
-  LANDED=5
+  SAFE=1,
+  IDLE=2,
+  LAUNCH=3,
+  FLIGHT=4,
+  NO_POWER=5,
+  DESCENT=6,
+  PARACHUTE_LANDING=7,
+  LANDED=8,
+  ABORT=9
 };
+
 
 
 class FCMS {
@@ -30,6 +34,7 @@ class FCMS {
     KalmanFilter kf_;
     BMP280 baro_;
     Flash flash_;
+    SDMC sdmc_;
 
     STATE curr_state_;
 
@@ -42,7 +47,11 @@ class FCMS {
 
     void setState(STATE state);
     bool nextState();
-    STATE getState();
+    STATE getState();    
+    
+    bool takeoffDetected = imu_.takeoffDetected;
+    bool apogeeDetected = baro_.apogeeDetected;
+    bool landingDetected = imu_.landingDetected;
 
     // TODO: implement below methods
 
@@ -50,7 +59,7 @@ class FCMS {
     void navigate();
     // writes data to flash memmory
     void commit();
+
+    void goToState(STATE state);
     
-
-
 };

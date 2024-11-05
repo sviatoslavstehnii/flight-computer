@@ -8,6 +8,10 @@ void FCMS::setup()
   imu_.setup();
   delay(100);
 
+  baro_.setup();
+
+  sdmc_.setup();
+
   // set capacity and erase chip
   flash_.setup(16777216, true);
   // write first bytes for consistency
@@ -24,7 +28,7 @@ void FCMS::setState(STATE state)
 
 bool FCMS::nextState()
 {
-  if (curr_state_ < 5) {
+  if (curr_state_ < 9) {
     curr_state_ = static_cast<STATE>(static_cast<int>(curr_state_) + 1);;
     return true;
   }
@@ -34,6 +38,12 @@ bool FCMS::nextState()
 STATE FCMS::getState()
 {
   return curr_state_;
+}
+
+
+void FCMS::goToState(STATE state)
+{
+  curr_state_ = state;
 }
 
 void FCMS::navigate()
@@ -74,3 +84,4 @@ void FCMS::commit()
   Serial.print("Data Journal: ");
   Serial.println(readData);
 }
+

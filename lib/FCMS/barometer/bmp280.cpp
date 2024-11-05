@@ -102,6 +102,7 @@ void BMP280::detectApogee()
     if (altitude_ < maxAltitude - minDropThreshold && climbing) {
         if (millis() - lastDetectionTime > detectionCooldown) {
             Serial.print("Apogee detected! Highest altitude: ");
+            apogeeDetected = true;
             Serial.println(maxAltitude);
             lastDetectionTime = millis();
             climbing = false;
