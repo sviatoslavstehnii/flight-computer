@@ -6,7 +6,7 @@ FCMS fcms{};
 BMP280 baro{};
 IMU imu{};
 SDMC sdmc{};
-Flash flash_{10};
+Flash flash{10};
 
 bool firstlaunch = true;
 bool firstAbortLoop = true;
@@ -28,7 +28,20 @@ void setup() {
   Wire.begin();
 
   delay(200);
-  fcms.setup();
+  // fcms.setup();
+  baro.setup();
+  delay(200);
+  imu.setup();
+  delay(200);
+  flash.setup(16777216, true);
+  char setup_data[] = "setup";
+  if (!flash.writeToMEJ(setup_data, sizeof(setup_data)) ) {
+    Serial.println("ERROR: failed to write setup data to flash chip");
+  }
+  delay(200);
+  sdmc.setup();
+  sdmc.write("test.txt", "hello");
+
   delay(1000);
 }
 
@@ -37,133 +50,144 @@ uint32_t commitTimer = 0;
 uint32_t frequency = 1000;
 
 void loop() {
+  char readData[1000] = "";
+
+  baro.update();
+  imu.update();
+  imu.printAccelData();
+  flash.readMEJ(readData, 1000);
+  Serial.print("Data Journal: ");
+  Serial.println(readData);
+  sdmc.read("test.txt");
+
+  delay(1000);
     // baro.update(); // Update BMP280 data and check for apogee
     // baro.printAltitude(); // Print the current altitude
     // imu.update(); // Update IMU data and check for takeoff/landing
     // imu.printGyroData();
     // imu.printAccelData();
     // delay(100); // Adjust the delay as necessary
-    STATE state = fcms.getState();
+  //   STATE state = fcms.getState();
 
-    if (state != SAFE || state != LANDED) {
-      if (millis() - commitTimer > frequency) {
-        fcms.navigate();
-        fcms.commit();
-        commitTimer = millis();
-      }
-    }
+  //   if (state != SAFE || state != LANDED) {
+  //     if (millis() - commitTimer > frequency) {
+  //       fcms.navigate();
+  //       fcms.commit();
+  //       commitTimer = millis();
+  //     }
+  //   }
 
-    switch (state)
-  {
-  case SAFE:
-    Serial.println("SAFE");
+  //   switch (state)
+  // {
+  // case SAFE:
+  //   Serial.println("SAFE");
 
-    fcms.goToState(LAUNCH);
-    break;
+  //   fcms.goToState(LAUNCH);
+  //   break;
 
-  case IDLE:
-    Serial.println("IDLE");
-    // start logging data
+  // case IDLE:
+  //   Serial.println("IDLE");
+  //   // start logging data
 
-    fcms.goToState(LAUNCH);
+  //   fcms.goToState(LAUNCH);
 
-    break;
+  //   break;
 
-  case LAUNCH:
+  // case LAUNCH:
 
-    if (firstlaunch) {
-      launchAbortTime = millis();
-      firstlaunch = false;
-    }
-    Serial.println("LAUNCH");
+  //   if (firstlaunch) {
+  //     launchAbortTime = millis();
+  //     firstlaunch = false;
+  //   }
+  //   Serial.println("LAUNCH");
 
-    // turn pyro on
+  //   // turn pyro on
 
-    if (millis() - launchAbortTime > 5000) {
-      fcms.goToState(ABORT);
-    }
+  //   if (millis() - launchAbortTime > 5000) {
+  //     fcms.goToState(ABORT);
+  //   }
 
-    if (fcms.takeoffDetected) {
-      fcms.goToState(FLIGHT);
-    }
-    break;
+  //   if (fcms.takeoffDetected) {
+  //     fcms.goToState(FLIGHT);
+  //   }
+  //   break;
 
-  case FLIGHT:
-    Serial.println("FLIGHT");
+  // case FLIGHT:
+  //   Serial.println("FLIGHT");
 
-    if (imu.getAccelX() < 1.5f) {
-      fcms.goToState(NO_POWER);
-    }
+  //   if (imu.getAccelX() < 1.5f) {
+  //     fcms.goToState(NO_POWER);
+  //   }
 
-    if (fcms.apogeeDetected) {
-      fcms.goToState(DESCENT);
-    }
+  //   if (fcms.apogeeDetected) {
+  //     fcms.goToState(DESCENT);
+  //   }
 
-    break;
+  //   break;
 
-  case NO_POWER:
-    if (fcms.apogeeDetected) {
-      fcms.goToState(DESCENT);
-    }
+  // case NO_POWER:
+  //   if (fcms.apogeeDetected) {
+  //     fcms.goToState(DESCENT);
+  //   }
 
-    if (baro.getAltitude() < 70.0f) {
-      fcms.goToState(PARACHUTE_LANDING);
-      landingDetectTime = millis();
-    }
+  //   if (baro.getAltitude() < 70.0f) {
+  //     fcms.goToState(PARACHUTE_LANDING);
+  //     landingDetectTime = millis();
+  //   }
 
-    break;
+  //   break;
 
-  case DESCENT:
+  // case DESCENT:
 
-    if (baro.getAltitude() < 70.0f) {
-      fcms.goToState(PARACHUTE_LANDING);
-      landingDetectTime = millis();
-    }
+  //   if (baro.getAltitude() < 70.0f) {
+  //     fcms.goToState(PARACHUTE_LANDING);
+  //     landingDetectTime = millis();
+  //   }
 
-    // write 2 time faster
-    frequency = 500;
+  //   // write 2 time faster
+  //   frequency = 500;
 
-    break;
+  //   break;
 
-  case PARACHUTE_LANDING:
-    // deploy parachute
+  // case PARACHUTE_LANDING:
+  //   // deploy parachute
 
-    // detect landing(only one way for it now)
-    if (millis() - landingDetectTime > 15000) {
-      fcms.landingDetected = true;
-      fcms.goToState(LANDED);
-    }
-    break;
-  case LANDED:
-    delay(2000);
+  //   // detect landing(only one way for it now)
+  //   if (millis() - landingDetectTime > 15000) {
+  //     fcms.landingDetected = true;
+  //     fcms.goToState(LANDED);
+  //   }
+  //   break;
+  // case LANDED:
+  //   delay(2000);
 
-    // write data to sd card
-      if (!dataWrittenToSD) {
-      char readData[1000] = "";
-      flash_.readDJ(readData, 1000);
-      sdmc.write("test.txt", readData);
-      }
+  //   // write data to sd card
+  //     if (!dataWrittenToSD) {
+  //     char readData[1000] = "";
+  //     flash_.readDJ(readData, 1000);
+  //     sdmc.write("test.txt", readData);
+  //     }
 
-    break;
-  case ABORT:
-    // turn pyro off
+  //   break;
+  // case ABORT:
+  //   // turn pyro off
 
-    // deploy parachute
+  //   // deploy parachute
 
-    if (firstAbortLoop)
-    {
-      abortLoopTime = millis();
-      firstAbortLoop = false;
-    }
+  //   if (firstAbortLoop)
+  //   {
+  //     abortLoopTime = millis();
+  //     firstAbortLoop = false;
+  //   }
 
-    if (millis() - abortLoopTime > 20000)
-    {
-      fcms.goToState(LANDED);
-    }
+  //   if (millis() - abortLoopTime > 20000)
+  //   {
+  //     fcms.goToState(LANDED);
+  //   }
 
-    break;
-  default:
-    break;
-  }
+  //   break;
+  // default:
+  //   break;
+  // }
 }
 
