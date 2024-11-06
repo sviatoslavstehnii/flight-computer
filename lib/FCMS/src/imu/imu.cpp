@@ -134,11 +134,11 @@ void IMU::update()
   updateAccel();
   updateGyro();
 
-  if (!flightMode) {
-    detectTakeoff();
-  } else {
-    detectLanding();
-  }
+  // if (!flightMode) {
+  //   detectTakeoff();
+  // } else {
+  //   detectLanding();
+  // }
 }
 
 void IMU::updateAccel()

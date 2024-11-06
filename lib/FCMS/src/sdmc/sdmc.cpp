@@ -26,11 +26,10 @@ bool SDMC::write(const char * filename, const char * text)
   return false;
 }
 
-bool SDMC::read(const char * filname)
+bool SDMC::read(const char * filename)
 {
-  File f = SD.open("test.txt");
+  File f = SD.open(filename);
   if (f) {
-    Serial.println("test.txt:");
 
     while (f.available()) {
       Serial.write(f.read());

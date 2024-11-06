@@ -3,7 +3,7 @@
 // Secure Digital Memory Card (SD)
 class SDMC {
   private:
-    const int chipSelect = 10;
+    const int chipSelect = 9;
 
   public:
     SDMC() = default;
@@ -15,7 +15,7 @@ class SDMC {
     void setup();
 
     bool write(const char * filename, const char * text);
-    bool read(const char * filname);
+    bool read(const char * filename);
 
     void remove(const char * path);
 };
