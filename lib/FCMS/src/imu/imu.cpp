@@ -45,7 +45,6 @@ void IMU::printGyroData()
 
 void IMU::printAccelData()
 {
-
   Serial.print("AccelX:");
   Serial.print(accX_);
   Serial.print(",");
@@ -96,9 +95,14 @@ float IMU::getAnglePitch()
   return anglePitch_;
 }
 
+float IMU::getAccelX() {
+    return accX_cal_;
+}
+
+
 void IMU::calibrate()
 {
-  Serial.print("Calibrating imu...");
+  Serial.println("Calibrating imu...");
 
   calibrateGyro();
   // calibrateAccel(0.0, 0.0, 0.0);
@@ -133,12 +137,9 @@ void IMU::update()
 {
   updateAccel();
   updateGyro();
-
-  // if (!flightMode) {
-  //   detectTakeoff();
-  // } else {
-  //   detectLanding();
-  // }
+  if (!takeoffDetected) {
+    detectTakeoff();
+  }
 }
 
 void IMU::updateAccel()
@@ -184,37 +185,38 @@ void IMU::updateGyro()
 }
 
 void IMU::detectTakeoff() {
-  const float accelThreshold = 2.0;
-  const float gyroThreshold = 200.0;
+  bool takeOffaccelConditions = abs(accX_cal_) > accelThreshold || 
+                    abs(accY_cal_) > accelThreshold || 
+                    abs(accZ_cal_) > accelThreshold;
+  
+  bool takeOffgyroConditions = abs(rollRate_) > gyroThreshold ||
+                    abs(pitchRate_) > gyroThreshold ||
+                    abs(yawRate_) > gyroThreshold;
 
-  if (abs(accX_cal_) > accelThreshold || abs(accY_cal_) > accelThreshold || abs(accZ_cal_) > accelThreshold) {
-    Serial.println("Takeoff detected based on acceleration!");
-    takeoffDetected = true;
-  }
-
-  if (abs(rollRate_) > gyroThreshold || abs(pitchRate_) > gyroThreshold || abs(yawRate_) > gyroThreshold) {
-    Serial.println("Takeoff detected based on gyroscope data!");
+  if (takeOffaccelConditions && takeOffgyroConditions) {
     takeoffDetected = true;
   }
 }
 
-float IMU::getAccelX() {
-    return accX_cal_;
+
+void IMU::detectLanding() {
+
+  bool landingAccelConditions = abs(accX_cal_) < accelThreshold && 
+                         abs(accY_cal_) < accelThreshold && 
+                         abs(accZ_cal_) < accelThreshold;
+
+  bool landingGyroConditions = abs(rollRate_) < gyroThreshold && 
+                        abs(pitchRate_) < gyroThreshold && 
+                        abs(yawRate_) < gyroThreshold;
+
+  if (landingAccelConditions && landingGyroConditions) {
+    successCount++;
+  } else {
+    successCount = 0;
+  }
+
+  if (successCount >= requiredChecks) {
+    landingDetected = true;
+  }
 }
-
-
-// void IMU::detectLanding() {
-//   const float accelThreshold = 2.0;
-//   const float gyroThreshold = 200.0;
-
-//   if (abs(accX_cal_) < accelThreshold && abs(accY_cal_) < accelThreshold && abs(accZ_cal_) < accelThreshold) {
-//     Serial.println("Landing detected based on acceleration!");
-//     flightMode = false;
-//   }
-
-//   if (abs(rollRate_) < gyroThreshold && abs(pitchRate_) < gyroThreshold && abs(yawRate_) < gyroThreshold) {
-//     Serial.println("Landing detected based on gyroscope data!");
-//     flightMode = false;
-//   }
-// }
 

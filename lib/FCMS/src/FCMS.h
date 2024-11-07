@@ -9,8 +9,7 @@
 
 #include <sstream>
 #include <iomanip>
-
-
+#include <iostream>
 
 // FCMS lib
 // Flight Computer Managment System 
@@ -23,9 +22,8 @@ enum STATE {
   DESCENT=6,
   PARACHUTE_LANDING=7,
   LANDED=8,
-  ABORT=9
+  ABORT=0
 };
-
 
 
 class FCMS {
@@ -39,27 +37,39 @@ class FCMS {
     STATE curr_state_;
 
     float pitch_ = 0; float roll_ = 0;
+
+    uint32_t loopTimer = 0;
+    uint32_t commitFlashTimer = 0; 
+    uint32_t frequency = 1000;
+
+    bool firstlaunch = true;
+    bool firstAbortLoop = true;
+    bool dataLogingStarted = false;
+    bool parachuteDeployed = false;
+    bool pyroOn = false;
+    bool dataWrittenToSD = false;
+
+    unsigned long launchAbortTime = 0;
+    unsigned long landingDetectTime = 0;
+    unsigned long abortLoopTime = 0;
+
+  
   public:
     FCMS(): flash_(10), kf_(0.004) {};
     ~FCMS() = default;
 
     void setup();
+    void updateData();
+    void updateState();
 
-    void setState(STATE state);
-    bool nextState();
-    STATE getState();    
-    
-    bool takeoffDetected = imu_.takeoffDetected;
-    bool apogeeDetected = baro_.apogeeDetected;
-    bool landingDetected = imu_.landingDetected;
-
-    // TODO: implement below methods
-
-    // updates some variables related to IMU, barometer and gps
-    void navigate();
-    // writes data to flash memmory
-    void commit();
-
+    STATE getState();
     void goToState(STATE state);
+    
+    // updates some variables related to IMU, barometer and gps using kalman filter
+    void navigateFilter();
+    // writes data to flash memmory
+    void commitFlash();
+
+
     
 };

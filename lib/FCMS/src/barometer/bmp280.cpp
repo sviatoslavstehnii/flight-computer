@@ -23,7 +23,7 @@ void BMP280::setup()
 void BMP280::update()
 {
     if (bmp_.takeForcedMeasurement()) {
-        printAltitude();
+        getAltitude();
         detectApogee();
     }
 }
@@ -49,7 +49,7 @@ void BMP280::calibrate()
   }
 
   if (n > 0) {
-    altitudeCalibration_ = sum / n; // Середнє
+    altitudeCalibration_ = sum / n;
     Serial.print("Calibrated altitude: ");
     Serial.println(altitudeCalibration_);
   }
@@ -61,12 +61,9 @@ void BMP280::calibrate()
 
 void BMP280::printAltitude()
 {
-  if (bmp_.takeForcedMeasurement()) {
-    altitude_ = bmp_.readAltitude() - altitudeCalibration_;
-    Serial.print(F("Approx altitude = "));
-    Serial.print(altitude_);
-    Serial.println(" m\n");
-  }
+  Serial.print(F("Approx altitude = "));
+  Serial.print(altitude_);
+  Serial.println(" m\n");
 }
 
 float BMP280::getAltitude()
@@ -101,7 +98,6 @@ void BMP280::detectApogee()
     }
     if (altitude_ < maxAltitude - minDropThreshold && climbing) {
         if (millis() - lastDetectionTime > detectionCooldown) {
-            Serial.print("Apogee detected! Highest altitude: ");
             apogeeDetected = true;
             Serial.println(maxAltitude);
             lastDetectionTime = millis();

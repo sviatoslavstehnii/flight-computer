@@ -8,20 +8,30 @@ class IMU {
     float rollRate_ = 0;
     float pitchRate_ = 0;
     float yawRate_ = 0;
-
-    float angleRoll_ = 0;
-    float anglePitch_ = 0;
-
     float rollCalibration_ = 0;
     float pitchCalibration_ = 0;
     float yawCalibration_ = 0;
 
+    float angleRoll_ = 0;
+    float anglePitch_ = 0;
 
+    
     void calibrate();
     void calibrateGyro();
     void calibrateAccel(float xc, float yc, float zc);
+
+
+    const float accelThreshold = 2.0;
+    const float gyroThreshold = 200.0;
     
-    bool flightMode;
+    const int requiredChecks = 5;
+    int successCount = 0;
+
+    bool takeoffDetected = false;
+    bool landingDetected = false;
+
+
+    void detectTakeoff();
 
   public:
     IMU() = default;
@@ -47,12 +57,10 @@ class IMU {
     float getAngleRoll();
     float getAnglePitch();
 
-    void detectTakeoff();
-    // void detectLanding();
-    void enterFlightMode();
-
     float getAccelX();
 
-    bool takeoffDetected = false;
-    bool landingDetected = false;
+    void detectLanding();
+    
+    bool getTakeoffDetected() { return takeoffDetected; }
+    bool getLandingDetected() { return landingDetected; }
 };
