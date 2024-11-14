@@ -41,18 +41,25 @@ void FCMS::goToState(STATE state)
 
 void FCMS::navigateFilter()
 {
+  imu_.update();
+
   kf_.updateRoll(imu_.getRollRate(), imu_.getAngleRoll());
   kf_.updatePitch(imu_.getPitchRate(), imu_.getAnglePitch());
+  kf_.updateYaw(imu_.getYawRate());
 
   pitch_ = kf_.getAnglePitch();
   roll_ = kf_.getAngleRoll();
+  yaw_ = kf_.getAngleYaw();
 
   // print for debug
-  // Serial.print("pitch: ");
-  // Serial.print(pitch_);
-  // Serial.print(", ");
-  // Serial.print("roll: ");
-  // Serial.println(roll_);
+  Serial.print("pitch: ");
+  Serial.print(pitch_);
+  Serial.print(", ");
+  Serial.print("roll: ");
+  Serial.print(roll_);
+  Serial.print(", ");
+  Serial.print("yaw: ");
+  Serial.println(yaw_);
 }
 
 void FCMS::commitFlash()
@@ -66,6 +73,7 @@ void FCMS::commitFlash()
   buf[msg_str.size()] = '\0';
   
   flash_.writeToMEJ(buf, sizeof(buf));
+  Serial.println(buf);
 
   // char readData[1000] = "";
   // flash_.readDJ(readData, 1000);
@@ -75,17 +83,6 @@ void FCMS::commitFlash()
 
 
 
-
-void FCMS::updateData() {
-  baro_.update();
-  // baro_.printAltitude();
-
-  imu_.update();
-  // imu_.printAccelData();
-  // imu_.printGyroData();
-
-  delay(100);
-}
 
 void FCMS::updateState() {
     STATE state = getState();
@@ -103,16 +100,19 @@ void FCMS::updateState() {
     }
 
     if (state != SAFE || state != LANDED) {
-      if (millis() - commitFlashTimer > frequency) {
-        navigateFilter();
+      if (millis() - commitMillis >= commitInterval && dataLogingStarted) {
         commitFlash();
-        commitFlashTimer = millis();
+        commitMillis = millis();
+      }
+      if(millis() - estimateMillis >= estimateInterval) {
+        navigateFilter();
+        estimateMillis = millis();
       }
     }
 
   switch (state) {
   case SAFE:
-    Serial.println("SAFE");
+    // Serial.println("SAFE");
 
     if (input_user == "2") {
       Serial.print("i got frrom uses input ");
@@ -199,7 +199,7 @@ void FCMS::updateState() {
     }
 
     // write 2 time faster
-    frequency = 500;
+    commitInterval /= 2;
 
     break;
 
@@ -265,3 +265,5 @@ void FCMS::updateState() {
     break;
   }
 }
+
+

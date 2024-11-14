@@ -5,6 +5,8 @@ class KalmanFilter {
   private:
     float angleRoll_ = 0;
     float anglePitch_ = 0;
+    float angleYaw_ = 0;
+    float filteredYawRate_ = 0; 
 
     float uncertaintyAngleRoll_ = 4;
     float uncertaintyAnglePitch_ = 4;
@@ -20,7 +22,10 @@ class KalmanFilter {
 
     void updateRoll(float input, float measurment);
     void updatePitch(float input, float measurment);
+    void updateYaw(float input);
 
     float getAngleRoll();
     float getAnglePitch();
+    float getAngleYaw();
+
 };

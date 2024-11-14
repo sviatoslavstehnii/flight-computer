@@ -14,6 +14,7 @@ class IMU {
 
     float angleRoll_ = 0;
     float anglePitch_ = 0;
+    float angleYaw_ = 0;
 
     
     void calibrate();

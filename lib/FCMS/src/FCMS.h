@@ -36,11 +36,14 @@ class FCMS {
 
     STATE curr_state_;
 
-    float pitch_ = 0; float roll_ = 0;
+    float pitch_ = 0; float roll_ = 0; float yaw_ = 0;
 
-    uint32_t loopTimer = 0;
-    uint32_t commitFlashTimer = 0; 
-    uint32_t frequency = 1000;
+    uint32_t estimateMillis = 0;
+    uint32_t estimateInterval = 4;
+
+    uint32_t commitMillis = 0;
+    uint32_t commitInterval = 100; 
+    
 
     bool firstlaunch = true;
     bool firstAbortLoop = true;
@@ -55,11 +58,10 @@ class FCMS {
 
   
   public:
-    FCMS(): flash_(10), kf_(0.004) {};
+    FCMS(): flash_(10), kf_(0.04) {};
     ~FCMS() = default;
 
     void setup();
-    void updateData();
     void updateState();
 
     STATE getState();
@@ -71,5 +73,5 @@ class FCMS {
     void commitFlash();
 
 
-    
+
 };
