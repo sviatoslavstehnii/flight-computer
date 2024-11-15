@@ -10,6 +10,7 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <queue>
 
 // FCMS lib
 // Flight Computer Managment System 
@@ -56,6 +57,7 @@ class FCMS {
     unsigned long landingDetectTime = 0;
     unsigned long abortLoopTime = 0;
 
+    std::queue<std::pair<char*, uint32_t>> major_events_q_;
   
   public:
     FCMS(): flash_(10), kf_(0.04) {};
@@ -67,10 +69,9 @@ class FCMS {
     STATE getState();
     void goToState(STATE state);
     
-    // updates some variables related to IMU, barometer and gps using kalman filter
     void navigateFilter();
-    // writes data to flash memmory
     void commitFlash();
+    void commitSDMC();
 
 
 

@@ -19,10 +19,9 @@ void FCMS::setup()
   flash_.setup(16777216, true);
   // write first bytes for consistency
   char setup_data[] = "setup";
-  if (!flash_.writeToMEJ(setup_data, sizeof(setup_data)) ) {
+  if (!flash_.writeToDJ(setup_data, sizeof(setup_data)) ) {
     Serial.println("ERROR: failed to write setup data to flash chip");
   }
-  flash_.clear();
 
   sdmc_.setup();
   delay(200);
@@ -52,77 +51,126 @@ void FCMS::navigateFilter()
   yaw_ = kf_.getAngleYaw();
 
   // print for debug
-  Serial.print("pitch: ");
-  Serial.print(pitch_);
-  Serial.print(", ");
-  Serial.print("roll: ");
-  Serial.print(roll_);
-  Serial.print(", ");
-  Serial.print("yaw: ");
-  Serial.println(yaw_);
+  // Serial.print("pitch: ");
+  // Serial.print(pitch_);
+  // Serial.print(", ");
+  // Serial.print("roll: ");
+  // Serial.print(roll_);
+  // Serial.print(", ");
+  // Serial.print("yaw: ");
+  // Serial.println(yaw_);
 }
 
 void FCMS::commitFlash()
 {
-  std::ostringstream msg;
-  msg << "Pitch: " << std::fixed << std::setprecision(2) << pitch_ << ", Roll: " << std::fixed << std::setprecision(2) << roll_;
-  std::string msg_str = msg.str();
 
-  char buf[msg_str.size() + 1];
-  std::copy(msg_str.begin(), msg_str.end(), buf);
-  buf[msg_str.size()] = '\0';
+  std::ostringstream data_msg;
+  data_msg << "Pitch: " << std::fixed << std::setprecision(2) << pitch_ << ", Roll: " << std::fixed << std::setprecision(2) << roll_ 
+    << ", Yaw: " << std::fixed << std::setprecision(2) << yaw_  ;
+  std::string data_msg_str = data_msg.str();
+
+  char data_buf[data_msg_str.size() + 1];
+  std::copy(data_msg_str.begin(), data_msg_str.end(), data_buf);
+  data_buf[data_msg_str.size()] = '\0';
   
-  flash_.writeToMEJ(buf, sizeof(buf));
-  Serial.println(buf);
+  flash_.writeToDJ(data_buf, sizeof(data_buf));
 
-  // char readData[1000] = "";
-  // flash_.readDJ(readData, 1000);
-  // Serial.print("Data Journal: ");
-  // Serial.println(readData);
+  while ( !major_events_q_.empty()) {
+    std::pair<char *, uint32_t> event = major_events_q_.front();
+    major_events_q_.pop();
+    
+    std::ostringstream event_msg;
+    event_msg << event.first << "; " << event.second;
+    std::string event_msg_str = event_msg.str();
+
+    char event_buf[event_msg_str.size() + 1];
+    std::copy(event_msg_str.begin(), event_msg_str.end(), event_buf);
+    event_buf[event_msg_str.size()] = '\0';
+    
+    flash_.writeToMEJ(event_buf, sizeof(event_buf));
+    Serial.println(event_buf);
+  }
+
 }
 
+void FCMS::commitSDMC()
+{
+  sdmc_.remove("dj.txt");
+  size_t bytes_read = 0;
+  while (true) {
+    char read_data[1000] = "";
+    flash_.readDJ(read_data, 1000, bytes_read);
+    if ( strlen(read_data) == 0 ) {
+      break;
+    }
+    if (!sdmc_.write("dj.txt", read_data)) {
+      Serial.println("error while writing to file");
+    }
+    bytes_read += strlen(read_data);
+  }
 
 
+  sdmc_.remove("mej.txt");
+  bytes_read = 0;
+  while (true) {
+    char read_data[1000] = "";
+    flash_.readMEJ(read_data, 1000, bytes_read);
+    if ( strlen(read_data) == 0 ) {
+      break;
+    }
+    if (!sdmc_.write("mej.txt", read_data)) {
+      Serial.println("error while writing to file");
+    }
+    bytes_read += strlen(read_data);
+  }
+
+
+
+}
 
 void FCMS::updateState() {
-    STATE state = getState();
+  STATE state = getState();
 
-    std::string input_user;
-    while (Serial.available() > 0) {
-      char c = Serial.read();
-      input_user += c;
-    }
+  std::string input_user;
+  while (Serial.available() > 0) {
+    char c = Serial.read();
+    input_user += c;
+  }
 
-    if (input_user == "0") {
-      Serial.print("i got frrom uses input ");
-      Serial.println(input_user.c_str());
-      goToState(ABORT);
-    }
+  if (input_user == "0") {
+    Serial.print("i got frrom uses input ");
+    Serial.println(input_user.c_str());
+    goToState(ABORT);
+    major_events_q_.push({"ABORT", millis()});
+  }
 
-    if (state != SAFE || state != LANDED) {
-      if (millis() - commitMillis >= commitInterval && dataLogingStarted) {
-        commitFlash();
-        commitMillis = millis();
-      }
-      if(millis() - estimateMillis >= estimateInterval) {
-        navigateFilter();
-        estimateMillis = millis();
-      }
+  if (state != SAFE && state != LANDED) {
+
+    if(millis() - estimateMillis >= estimateInterval) {
+      estimateMillis = millis();
+      navigateFilter();
     }
+    if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
+      commitMillis = millis();
+      commitFlash();
+    }
+  }
 
   switch (state) {
   case SAFE:
     // Serial.println("SAFE");
+    // goToState(IDLE);
 
     if (input_user == "2") {
       Serial.print("i got frrom uses input ");
       Serial.println(input_user.c_str());
       goToState(IDLE);
+      major_events_q_.push({"IDLE", millis()});
     }
     break;
 
   case IDLE:
-    Serial.println("IDLE");
+    // Serial.println("IDLE");
 
     if (!dataLogingStarted) {
       Serial.println("Start writing data to flash");
@@ -133,12 +181,13 @@ void FCMS::updateState() {
       Serial.print("i got frrom uses input ");
       Serial.println(input_user.c_str());
       goToState(LAUNCH);
+      major_events_q_.push({"LAUNCH", millis()});
     }
 
     break;
 
   case LAUNCH:
-    Serial.println("LAUNCH");
+    // Serial.println("LAUNCH");
     if (firstlaunch) {
       launchAbortTime = millis();
       firstlaunch = false;
@@ -153,11 +202,13 @@ void FCMS::updateState() {
 
     if (millis() - launchAbortTime > 5000) {
       goToState(ABORT);
+      major_events_q_.push({"ABORT", millis()});
     }
 
     if (imu_.getTakeoffDetected()) {
       Serial.println("Takeoff detected!");
       goToState(FLIGHT);
+      major_events_q_.push({"FLIGHT", millis()});
     }
     break;
 
@@ -166,6 +217,7 @@ void FCMS::updateState() {
 
     if (imu_.getAccelX() < 1.5f) { //m/s^2
       goToState(NO_POWER);
+      major_events_q_.push({"NO_POWER", millis()});
     }
 
     if (baro_.getApogeeDetected()) {
@@ -173,6 +225,7 @@ void FCMS::updateState() {
       Serial.print("Max apogee: ");
       Serial.println(baro_.getMaxApogee());
       goToState(DESCENT);
+      major_events_q_.push({"DESCENT", millis()});
     }
 
     break;
@@ -182,11 +235,13 @@ void FCMS::updateState() {
     if (baro_.getApogeeDetected()) {
       Serial.println("Apogee detected!");
       goToState(DESCENT);
+      major_events_q_.push({"DESCENT", millis()});
     }
 
     if (baro_.getAltitude() < 70.0f) {  //m
       goToState(PARACHUTE_LANDING);
       landingDetectTime = millis();
+      major_events_q_.push({"PARACHUTE_LANDING", millis()});
     }
 
     break;
@@ -196,6 +251,7 @@ void FCMS::updateState() {
     if (baro_.getAltitude() < 70.0f) {  //m
       goToState(PARACHUTE_LANDING);
       landingDetectTime = millis();
+      major_events_q_.push({"PARACHUTE_LANDING", millis()});
     }
 
     // write 2 time faster
@@ -223,24 +279,23 @@ void FCMS::updateState() {
     if (imu_.getLandingDetected()) {
       Serial.println("Landing detected!");
       goToState(LANDED);
+      major_events_q_.push({"LANDED", millis()});
     }
 
     break;
   case LANDED:
     Serial.println("LANDED");
-    delay(2000);
+    // delay(2000);
 
       // write data to sd card
       if (!dataWrittenToSD) {
-        char readData[1000] = "";
-        flash_.readMEJ(readData, 1000);
-        sdmc_.write("landed.txt", readData);
+        commitFlash();
+        commitSDMC();
         dataWrittenToSD = true;
-        Serial.println("Data written to SD card");
       }
     break;
   case ABORT:
-    Serial.println("ABORT");
+    // Serial.println("ABORT");
 
     if (firstAbortLoop)
     {
@@ -258,6 +313,7 @@ void FCMS::updateState() {
     if (millis() - abortLoopTime > 15000)
     {
       goToState(LANDED);
+      major_events_q_.push({"LANDED", millis()});
     }
 
     break;

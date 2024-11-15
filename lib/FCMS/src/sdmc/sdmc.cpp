@@ -11,7 +11,7 @@ void SDMC::setup()
     while (true);
   }
 
-  Serial.println("initialization done.");
+  Serial.println("SD card initialization done.");
 }
 
 bool SDMC::write(const char * filename, const char * text)
@@ -22,6 +22,7 @@ bool SDMC::write(const char * filename, const char * text)
     f.close();
     return true;
   }
+  f.close();
 
   return false;
 }
@@ -35,11 +36,15 @@ bool SDMC::read(const char * filename)
       Serial.write(f.read());
     }
     f.close();
+    return true;
   }
+  f.close();
   return false;
 }
 
 void SDMC::remove(const char *path)
 {
-  SD.remove(path);
+  if (SD.exists(path)) {
+      SD.remove(path);
+  }
 }
