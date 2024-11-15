@@ -69,14 +69,16 @@ void FCMS::commitFlash()
 
   std::ostringstream data_msg;
   data_msg << "Pitch:" << std::fixed << std::setprecision(2) << pitch_ << ",Roll: " << std::fixed << std::setprecision(2) << roll_ 
-    << ",Yaw: " << std::fixed << std::setprecision(2) << yaw_ << ",Alt:" << std::fixed << std::setprecision(2) << altitude_ ;
+    << ",Yaw: " << std::fixed << std::setprecision(2) << yaw_ << ",Alt:" << std::fixed << std::setprecision(2) << altitude_ << ";"<< getState();
   std::string data_msg_str = data_msg.str();
 
   char data_buf[data_msg_str.size() + 1];
   std::copy(data_msg_str.begin(), data_msg_str.end(), data_buf);
   data_buf[data_msg_str.size()] = '\0';
   
-  flash_.writeToDJ(data_buf, sizeof(data_buf));
+  if (!flash_.writeToDJ(data_buf, sizeof(data_buf))) {
+    Serial.println("error");
+  }
 
   while ( !major_events_q_.empty()) {
     std::pair<char *, uint32_t> event = major_events_q_.front();

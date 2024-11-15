@@ -54,6 +54,7 @@ bool Flash::writeToPartition(char *buf, size_t len, size_t &curr, size_t end)
   new_buf[len] = '\0'; 
 
   if (curr >= end) {
+    Serial.println("No mem left");
     return false;
   }
 

@@ -41,10 +41,10 @@ class FCMS {
     float altitude_ = 0;
 
     uint32_t estimateMillis = 0;
-    uint32_t estimateInterval = 4;
+    uint32_t estimateInterval = 40;
 
     uint32_t commitMillis = 0;
-    uint32_t commitInterval = 30; 
+    uint32_t commitInterval = 150; 
     
 
     bool firstlaunch = true;
