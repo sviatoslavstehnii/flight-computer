@@ -38,7 +38,7 @@ void FCMS::goToState(STATE state)
   curr_state_ = state;
 }
 
-void FCMS::navigateFilter()
+void FCMS::estimate()
 {
   imu_.update();
 
@@ -49,6 +49,9 @@ void FCMS::navigateFilter()
   pitch_ = kf_.getAnglePitch();
   roll_ = kf_.getAngleRoll();
   yaw_ = kf_.getAngleYaw();
+
+  baro_.update();
+  altitude_ = baro_.getAltitude();
 
   // print for debug
   // Serial.print("pitch: ");
@@ -65,8 +68,8 @@ void FCMS::commitFlash()
 {
 
   std::ostringstream data_msg;
-  data_msg << "Pitch: " << std::fixed << std::setprecision(2) << pitch_ << ", Roll: " << std::fixed << std::setprecision(2) << roll_ 
-    << ", Yaw: " << std::fixed << std::setprecision(2) << yaw_  ;
+  data_msg << "Pitch:" << std::fixed << std::setprecision(2) << pitch_ << ",Roll: " << std::fixed << std::setprecision(2) << roll_ 
+    << ",Yaw: " << std::fixed << std::setprecision(2) << yaw_ << ",Alt:" << std::fixed << std::setprecision(2) << altitude_ ;
   std::string data_msg_str = data_msg.str();
 
   char data_buf[data_msg_str.size() + 1];
@@ -148,7 +151,7 @@ void FCMS::updateState() {
 
     if(millis() - estimateMillis >= estimateInterval) {
       estimateMillis = millis();
-      navigateFilter();
+      estimate();
     }
     if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = millis();

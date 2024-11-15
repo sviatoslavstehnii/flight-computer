@@ -38,12 +38,13 @@ class FCMS {
     STATE curr_state_;
 
     float pitch_ = 0; float roll_ = 0; float yaw_ = 0;
+    float altitude_ = 0;
 
     uint32_t estimateMillis = 0;
     uint32_t estimateInterval = 4;
 
     uint32_t commitMillis = 0;
-    uint32_t commitInterval = 100; 
+    uint32_t commitInterval = 30; 
     
 
     bool firstlaunch = true;
@@ -69,7 +70,7 @@ class FCMS {
     STATE getState();
     void goToState(STATE state);
     
-    void navigateFilter();
+    void estimate();
     void commitFlash();
     void commitSDMC();
 
