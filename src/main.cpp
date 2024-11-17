@@ -23,7 +23,6 @@ void setup() {
   for (int i = 0; i < 10000000; i++) {
     fcms.updateState();
   }
-  fcms.commitSDMC();
 
   SDMC sdmc{};
   sdmc.setup();

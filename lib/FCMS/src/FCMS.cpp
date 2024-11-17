@@ -164,7 +164,6 @@ void FCMS::updateState() {
   switch (state) {
   case SAFE:
     // Serial.println("SAFE");
-    // goToState(IDLE);
 
     if (input_user == "2") {
       Serial.print("i got frrom uses input ");
@@ -290,10 +289,10 @@ void FCMS::updateState() {
     break;
   case LANDED:
     Serial.println("LANDED");
-    // delay(2000);
 
       // write data to sd card
       if (!dataWrittenToSD) {
+        delay(2000);
         commitFlash();
         commitSDMC();
         dataWrittenToSD = true;
