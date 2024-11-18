@@ -66,24 +66,6 @@ class FCMS {
 
     std::queue<std::pair<char*, uint32_t>> major_events_q_;
 
-    struct Waypoint {
-      float lat;
-      float lon;
-    };
-
-    struct Position {
-      float lat;
-      float lon;
-    };
-
-    CURRENT_MODE currentMode = LAUNCH_DIRECTION_HOLD;
-
-    void navigateToWaypoint(Position currentPos, Waypoint targetPos);
-    void abortEuler(float pitch, float roll);
-    void launchDirectionHold(float pitch, float roll);
-    void adjustPitchAndYaw(float bearing, float pitch);
-
-
   public:
     // FCMS(): flash_(10), kf_(0.004) {};
     FCMS() : flash_(10), kf_(0.004), gps_(&Serial1) {}
@@ -99,9 +81,5 @@ class FCMS {
     void estimate();
     void commitFlash();
     void commitSDMC();
-
-
-    void test_waypoint();
-    void waypoint_gps();
     
 };
