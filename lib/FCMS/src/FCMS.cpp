@@ -133,6 +133,19 @@ void FCMS::commitSDMC()
 
 }
 
+void FCMS::monitorHealth()
+{
+  Wire.beginTransmission(0x68);
+  if (!Wire.endTransmission() == 0) {
+    major_events_q_.push({"IMU_FAILURE", millis()});
+  }
+
+  Wire.beginTransmission(0x76);
+  if (!Wire.endTransmission() == 0) {
+    major_events_q_.push({"BAROMETER_FAILURE", millis()});
+  }
+}
+
 void FCMS::updateState() {
   STATE state = getState();
 
@@ -158,6 +171,12 @@ void FCMS::updateState() {
     if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = millis();
       commitFlash();
+    }
+
+    if (millis() - monitorMillis >= monitorInterval) {
+      monitorMillis = millis();
+      Serial.println("check health");
+      monitorHealth();
     }
   }
 

@@ -27,6 +27,8 @@ enum STATE {
 };
 
 
+
+
 class FCMS {
   private:
     IMU imu_;
@@ -44,7 +46,11 @@ class FCMS {
     uint32_t estimateInterval = 40;
 
     uint32_t commitMillis = 0;
-    uint32_t commitInterval = 150; 
+    uint32_t commitInterval = 150;
+
+    uint32_t monitorMillis = 0;
+    uint32_t monitorInterval = 400;
+
     
 
     bool firstlaunch = true;
@@ -73,6 +79,7 @@ class FCMS {
     void estimate();
     void commitFlash();
     void commitSDMC();
+    void monitorHealth();
 
 
 

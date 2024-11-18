@@ -20,19 +20,21 @@ void setup() {
 
   fcms.setup();
   Serial.println("STAAART");
-  for (int i = 0; i < 10000000; i++) {
-    fcms.updateState();
-  }
+  // for (int i = 0; i < 10000000; i++) {
+  //   fcms.updateState();
+  // }
 
-  SDMC sdmc{};
-  sdmc.setup();
-  sdmc.read("dj.txt");
-  sdmc.read("mej.txt");
-  Serial.println("END");
+  // SDMC sdmc{};
+  // sdmc.setup();
+  // sdmc.read("dj.txt");
+  // sdmc.read("mej.txt");
+  // Serial.println("END");
 }
 
 
 void loop() {
+      fcms.updateState();
+
 }
 
 
