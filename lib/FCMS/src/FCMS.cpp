@@ -265,3 +265,210 @@ void FCMS::updateState() {
     break;
   }
 }
+
+
+
+// haversine formula
+float haversine(float lat1, float lon1, float lat2, float lon2) {
+  float R = 6371.0f; // Radius of the earth in km
+  float dLat = (lat2 - lat1) * (PI / 180.0f);
+  float dLon = (lon2 - lon1) * (PI / 180.0f);
+  float a = sin(dLat / 2.0f) * sin(dLat / 2.0f) +
+            cos(lat1 * (PI / 180.0f)) * cos(lat2 * (PI / 180.0f)) *
+            sin(dLon / 2.0f) * sin(dLon / 2.0f);
+  float c = 2.0f * atan2(sqrt(a), sqrt(1.0f - a));
+  return R * c; // km
+}
+
+float calculateBearing(float lat1, float lon1, float lat2, float lon2) {
+  float dLon = (lon2 - lon1) * (PI / 180.0f);
+  float y = sin(dLon) * cos(lat2 * (PI / 180.0f));
+  float x = cos(lat1 * (PI / 180.0f)) * sin(lat2 * (PI / 180.0f)) -
+            sin(lat1 * (PI / 180.0f)) * cos(lat2 * (PI / 180.0f)) * cos(dLon);
+  float brng = atan2(y, x) * (180.0f / PI);
+  return brng < 0 ? brng + 360.0f : brng; // degrees
+}
+
+void FCMS::launchDirectionHold(float roll, float rollrate) {
+  float rollThreshold = 5.0;    // 5 degrees
+  float rollRateThreshold = 5.0; // 5 degrees per second
+
+  if (fabs(roll) > rollThreshold || fabs(rollrate) > rollRateThreshold) {
+    Serial.print("Adjusting roll to: ");
+    Serial.print(roll, 2);
+    Serial.println(" degrees");
+
+    Serial.print("Adjusting roll rate to: ");
+    Serial.print(rollrate, 2);
+    Serial.println(" degrees per second");
+  } else {
+    currentMode = WAYPOINT_GUIDANCE;
+  }
+}
+
+void FCMS::navigateToWaypoint(Position currentPos, Waypoint targetPos) {
+  float distance = haversine(currentPos.lat, currentPos.lon, targetPos.lat, targetPos.lon);
+  float bearing = calculateBearing(currentPos.lat, currentPos.lon, targetPos.lat, targetPos.lon);
+
+  Serial.print("Distance to waypoint: ");
+  Serial.print(distance, 2);
+  Serial.println(" km");
+
+  Serial.print("Bearing to waypoint: ");
+  Serial.print(bearing, 2);
+  Serial.println(" degrees");
+
+  float waypointThreshold = 0.03f; // 30 meters
+  float maxPitchLimit = 20.0f;    // 20 degrees
+
+  if (distance < waypointThreshold || fabs(imu_.getAnglePitch()) > maxPitchLimit) {
+    currentMode = ABORT_EULER;
+  } else {
+    adjustPitchAndYaw(bearing, imu_.getAnglePitch());
+  }
+}
+
+void FCMS::abortEuler(float pitch, float roll) {
+  float pitchThreshold = 5.0;  // 5 degrees
+  float rollThreshold = 5.0;   // 5 degrees
+
+  float pitchError = (fabs(pitch) > pitchThreshold) ? pitch - copysign(pitchThreshold, pitch) : 0.0f;
+  float rollError = (fabs(roll) > rollThreshold) ? roll - copysign(rollThreshold, roll) : 0.0f;
+
+  if (fabs(pitchError) > 0 || fabs(rollError) > 0) {
+    Serial.print("Adjusting pitch to: ");
+    Serial.print(pitchError, 2);
+    Serial.println(" degrees");
+
+    Serial.print("Adjusting roll to: ");
+    Serial.print(rollError, 2);
+    Serial.println(" degrees");
+  } else {
+    Serial.println("Rocket stabilized. Ready for parachute deployment.");
+  }
+}
+
+void FCMS::adjustPitchAndYaw(float bearing, float pitch) {
+  float pitchThreshold = 5.0;  // 5 degrees
+  float yawThreshold = 5.0;    // 5 degrees
+
+  float pitchError = pitch - pitchThreshold;
+  float yawError = bearing - yawThreshold;
+
+  if (fabs(pitchError) > pitchThreshold || fabs(yawError) > yawThreshold) {
+    Serial.print("Adjusting pitch to: ");
+    Serial.print(pitchError, 2);
+    Serial.println(" degrees");
+
+    Serial.print("Adjusting yaw to: ");
+    Serial.print(yawError, 2);
+    Serial.println(" degrees");
+  } else {
+    Serial.println("Pitch and yaw aligned.");
+  }
+}
+
+
+void FCMS::waypoint_gps() {
+  float currentLat = getLatitude();
+  float currentLon = getLongitude();
+
+  Position currentPos{currentLat, currentLon};
+  Waypoint waypoint{49.8419f, 24.0316f};
+
+  float angleRoll_ = imu_.getAngleRoll();
+  float angleRollrate_ = imu_.getRollRate();
+  float anglePitch_ = imu_.getAnglePitch();
+  
+
+switch (currentMode) {
+  case LAUNCH_DIRECTION_HOLD:
+    launchDirectionHold(angleRoll_, angleRollrate_);
+    break;
+
+  case WAYPOINT_GUIDANCE:
+    navigateToWaypoint(currentPos, waypoint);
+    break;
+
+  case ABORT_EULER:
+    abortEuler(angleRoll_, anglePitch_);
+    break;
+  
+  default:
+  Serial.println("Unknown mode");
+    break;
+  } 
+}
+
+
+void FCMS::test_waypoint() {
+    static int testScenario = 0;  
+    static float pitch = 0.0, roll = 0.0;
+    static Position currentPos = {49.8419f, 24.0315f};
+    static Waypoint waypoint = {49.8419f, 24.0316f};
+    static float simulatedDistance = 0.05f;  // 50 meters
+
+    Serial.print("Current Mode: ");
+    Serial.println(currentMode);
+
+    switch (testScenario) {
+        case 0:  // Stable launch
+            Serial.println("Scenario 0: Stable Launch");
+            pitch = 0.0;
+            roll = 0.0;
+            break;
+
+        case 1:  // Test roll deviation beyond threshold
+            Serial.println("Scenario 1: Roll deviation");
+            roll = 7.0;  // Simulate roll deviation
+            break;
+
+        case 2:  // Test waypoint proximity
+            Serial.println("Scenario 2: Near waypoint");
+            simulatedDistance = 0.02f;  // Simulate approaching the waypoint
+            break;
+
+        case 3:  // Test pitch exceeding limits
+            Serial.println("Scenario 3: Pitch exceeds limit");
+            pitch = 12.0;  // Exceed max pitch
+            break;
+
+        case 4:  // Test abort to Euler state
+            Serial.println("Scenario 4: Abort Euler");
+            pitch = 15.0;  // Large pitch to trigger abort
+            roll = 10.0;   // Large roll to trigger abort
+            break;
+
+        default:
+            Serial.println("End of scenarios.");
+            return;  // Stop testing
+    }
+
+    // Update mode based on current simulated values
+    switch (currentMode) {
+        case LAUNCH_DIRECTION_HOLD:
+            launchDirectionHold(pitch, roll);
+            break;
+
+        case WAYPOINT_GUIDANCE:
+            // Simulate navigation and check distance
+            currentPos = {49.8419f, 24.0315f};  // Simulate current position
+            waypoint = {49.8420f, 24.0316f};    // Update waypoint if needed
+            navigateToWaypoint(currentPos, waypoint);
+            break;
+
+        case ABORT_EULER:
+            abortEuler(pitch, roll);
+            break;
+
+        default:
+            Serial.println("Unknown mode");
+            break;
+    }
+
+    static unsigned long lastTime = 0;
+    if (millis() - lastTime > 5000) {
+        lastTime = millis();
+        testScenario++;
+    }
+}

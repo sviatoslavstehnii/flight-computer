@@ -15,7 +15,8 @@ void setup() {
 
 
 void loop() {
-  fcms.updateData();
-  fcms.updateState();
+  // fcms.updateData();
+  // fcms.updateState();
+  fcms.test_waypoint();
 }
 
