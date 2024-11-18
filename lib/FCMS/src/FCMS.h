@@ -26,8 +26,11 @@ enum STATE {
   ABORT=0
 };
 
-
-
+enum CURRENT_MODE {
+  LAUNCH_DIRECTION_HOLD=0,
+  ABORT_EULER=1,
+  WAYPOINT_GUIDANCE=2
+};
 
 class FCMS {
   private:
@@ -36,6 +39,7 @@ class FCMS {
     BMP280 baro_;
     Flash flash_;
     SDMC sdmc_;
+    GPS gps_;
 
     STATE curr_state_;
 
@@ -65,9 +69,11 @@ class FCMS {
     unsigned long abortLoopTime = 0;
 
     std::queue<std::pair<char*, uint32_t>> major_events_q_;
-  
+
   public:
-    FCMS(): flash_(10), kf_(0.04) {};
+    // FCMS(): flash_(10), kf_(0.004) {};
+    FCMS() : flash_(10), kf_(0.004), gps_(&Serial1) {}
+
     ~FCMS() = default;
 
     void setup();
@@ -83,4 +89,5 @@ class FCMS {
 
 
 
+    
 };
