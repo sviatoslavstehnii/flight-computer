@@ -10,6 +10,7 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <queue>
 
 // FCMS lib
 // Flight Computer Managment System 
@@ -42,11 +43,15 @@ class FCMS {
 
     STATE curr_state_;
 
-    float pitch_ = 0; float roll_ = 0;
+    float pitch_ = 0; float roll_ = 0; float yaw_ = 0;
+    float altitude_ = 0;
 
-    uint32_t loopTimer = 0;
-    uint32_t commitFlashTimer = 0; 
-    uint32_t frequency = 1000;
+    uint32_t estimateMillis = 0;
+    uint32_t estimateInterval = 40;
+
+    uint32_t commitMillis = 0;
+    uint32_t commitInterval = 150; 
+    
 
     bool firstlaunch = true;
     bool firstAbortLoop = true;
@@ -59,24 +64,8 @@ class FCMS {
     unsigned long landingDetectTime = 0;
     unsigned long abortLoopTime = 0;
 
-  
-  public:
-    // FCMS(): flash_(10), kf_(0.004) {};
-    FCMS() : flash_(10), kf_(0.004), gps_(&Serial1) {}
+    std::queue<std::pair<char*, uint32_t>> major_events_q_;
 
-    ~FCMS() = default;
-
-    void setup();
-    void updateData();
-    void updateState();
-
-    STATE getState();
-    void goToState(STATE state);
-    
-    // updates some variables related to IMU, barometer and gps using kalman filter
-    void navigateFilter();
-    // writes data to flash memmory
-    void commitFlash();
     struct Waypoint {
       float lat;
       float lon;
@@ -87,22 +76,32 @@ class FCMS {
       float lon;
     };
 
-    nmea_float_t getLatitude();
-    nmea_float_t getLongitude();
+    CURRENT_MODE currentMode = LAUNCH_DIRECTION_HOLD;
+
     void navigateToWaypoint(Position currentPos, Waypoint targetPos);
     void abortEuler(float pitch, float roll);
     void launchDirectionHold(float pitch, float roll);
     void adjustPitchAndYaw(float bearing, float pitch);
 
 
+  public:
+    // FCMS(): flash_(10), kf_(0.004) {};
+    FCMS() : flash_(10), kf_(0.004), gps_(&Serial1) {}
 
-    CURRENT_MODE currentMode = LAUNCH_DIRECTION_HOLD;
+    ~FCMS() = default;
+
+    void setup();
+    void updateState();
+
+    STATE getState();
+    void goToState(STATE state);
+    
+    void estimate();
+    void commitFlash();
+    void commitSDMC();
+
+
     void test_waypoint();
     void waypoint_gps();
-
-    void looped();
-
-
+    
 };
-
-

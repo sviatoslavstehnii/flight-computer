@@ -22,6 +22,13 @@ void KalmanFilter::updatePitch(float input, float measurment)
   uncertaintyAnglePitch_ = (1-KalmanGain)*uncertaintyAnglePitch_;
 }
 
+void KalmanFilter::updateYaw(float input)
+{
+  float alpha = 0.3;
+  float filteredYawRate_ = alpha * input + (1 - alpha) * filteredYawRate_;
+  angleYaw_ += filteredYawRate_ * dt_;
+}
+
 float KalmanFilter::getAngleRoll()
 {
   return angleRoll_;
@@ -30,4 +37,9 @@ float KalmanFilter::getAngleRoll()
 float KalmanFilter::getAnglePitch()
 {
   return anglePitch_;
+}
+
+float KalmanFilter::getAngleYaw()
+{
+  return angleYaw_;
 }
