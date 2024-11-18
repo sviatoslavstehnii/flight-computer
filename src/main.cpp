@@ -20,21 +20,11 @@ void setup() {
 
   fcms.setup();
   Serial.println("STAAART");
-  // for (int i = 0; i < 10000000; i++) {
-  //   fcms.updateState();
-  // }
-
-  // SDMC sdmc{};
-  // sdmc.setup();
-  // sdmc.read("dj.txt");
-  // sdmc.read("mej.txt");
-  // Serial.println("END");
 }
 
 
 void loop() {
-      fcms.updateState();
-
+  fcms.updateState();
 }
 
 
@@ -45,17 +35,16 @@ void loop() {
 //   while (!Serial);
 //   Serial.println("Starting...");
 
+//   Serial.println("STAAART");
+//   for (int i = 0; i < 10000000; i++) {
+//     fcms.updateState();
+//   }
+
 //   SDMC sdmc{};
 //   sdmc.setup();
-    
-
-//   Serial.println("dj.txt: ");
 //   sdmc.read("dj.txt");
-//   auto f = SD.open("mej.txt");
-//   Serial.println(f.size());
-
-//   Serial.println("mej.txt: ");
 //   sdmc.read("mej.txt");
+//   Serial.println("END");
 
 // }
 
