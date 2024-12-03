@@ -6,6 +6,7 @@
 #include "gps/gps.h"
 #include "sdmc/sdmc.h"
 #include "ina/ina.h"
+#include "lora/lora.h"
 
 #include <sstream>
 #include <iomanip>
