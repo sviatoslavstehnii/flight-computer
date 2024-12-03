@@ -3,7 +3,7 @@
 // Secure Digital Memory Card (SD)
 class SDMC {
   private:
-    const int chipSelect = 9;
+    const int chipSelect = 17;
 
   public:
     SDMC() = default;

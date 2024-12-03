@@ -1,5 +1,6 @@
 #include "barometer/bmp280.h"
 #include "barometer/bmp180.h"
+#include "barometer/bmp388.h"
 #include "imu/imu.h"
 #include "imu/kalman_filter.h"
 #include "flash/flash.h"
@@ -72,7 +73,7 @@ class FCMS {
 
   public:
     // FCMS(): flash_(10), kf_(0.004) {};
-    FCMS() : flash_(10), kf_(0.004), gps_(&Serial1) {}
+    FCMS() : flash_(9), kf_(0.004), gps_(&Serial1) {}
 
     ~FCMS() = default;
 
