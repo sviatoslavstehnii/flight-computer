@@ -1,31 +1,16 @@
-#include "imu.h"
+#include "imu_9dof.h"
 
 
-void IMU::setup()
+
+void IMU9DOF::setup()
 {
-  // assume that Wire.begin() is already executed
-  Wire.beginTransmission(0x68);
-  Wire.write(0x6B);  // PWR_MGMT_1 register
-  Wire.write(0);     // Wake up MPU6050
-  Wire.endTransmission();
-
-  // low pass filter
-  Wire.beginTransmission(0x68);
-  Wire.write(0x1A);
-  Wire.write(0x05);
-  Wire.endTransmission();
-
-  // set sensitivity for accel
-  Wire.beginTransmission(0x68);
-  Wire.write(0x1C);
-  Wire.write(0x10);
-  Wire.endTransmission();
-
-  // set sensitivity for gyro
-  Wire.beginTransmission(0x68);
-  Wire.write(0x1B);
-  Wire.write(0x8);
-  Wire.endTransmission();
+  if(!bno_.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while(1);
+  }
+  bno_.setExtCrystalUse(true);
 
 
   calibrate();
@@ -33,8 +18,7 @@ void IMU::setup()
 }
 
 
-// currently prints roll, pitch, yaw
-void IMU::printGyroData()
+void IMU9DOF::printGyroData()
 {
   Serial.print("roll=");
   Serial.println(getRollRate());
@@ -45,7 +29,7 @@ void IMU::printGyroData()
   Serial.println("");
 }
 
-void IMU::printAccelData()
+void IMU9DOF::printAccelData()
 {
   Serial.print("AccelX:");
   Serial.print(accX_);
@@ -58,7 +42,7 @@ void IMU::printAccelData()
   Serial.println("");
 }
 
-void IMU::printScaledAccelData()
+void IMU9DOF::printScaledAccelData()
 {
   Serial.print("AccelX:");
   Serial.print(accX_cal_);
@@ -72,39 +56,39 @@ void IMU::printScaledAccelData()
 }
 
 
-float IMU::getRollRate()
+float IMU9DOF::getRollRate()
 {
   return rollRate_;
 }
 
-float IMU::getPitchRate()
+float IMU9DOF::getPitchRate()
 {
   return pitchRate_;
 }
 
-float IMU::getYawRate()
+float IMU9DOF::getYawRate()
 {
   return yawRate_;
 }
 
-float IMU::getAngleRoll()
+float IMU9DOF::getAngleRoll()
 {
   return angleRoll_;
 }
 
-float IMU::getAnglePitch()
+float IMU9DOF::getAnglePitch()
 {
   return anglePitch_;
 }
 
-float IMU::getAccelX() {
+float IMU9DOF::getAccelX() {
     return accX_cal_;
 }
 
 
-void IMU::calibrate()
+void IMU9DOF::calibrate()
 {
-  Serial.println("Calibrating imu...");
+  Serial.println("Calibrating IMU9DOF...");
 
   calibrateGyro();
   // calibrateAccel(0.0, 0.0, 0.0);
@@ -112,7 +96,7 @@ void IMU::calibrate()
 
 }
 
-void IMU::calibrateGyro()
+void IMU9DOF::calibrateGyro()
 {
   float tempRollCalibration_ = 0;
   float tempPitchCalibration_ = 0;
@@ -134,14 +118,14 @@ void IMU::calibrateGyro()
 
 
 // highly recommended to adjust for yourself
-void IMU::calibrateAccel(float xc, float yc, float zc)
+void IMU9DOF::calibrateAccel(float xc, float yc, float zc)
 {
   accXCalibration_ = xc;
   accYCalibration_ = yc;
   accZCalibration_ = zc;
 }
 
-void IMU::update()
+void IMU9DOF::update()
 {
   updateAccel();
   updateGyro();
@@ -150,26 +134,16 @@ void IMU::update()
   }
 }
 
-void IMU::updateAccel()
+void IMU9DOF::updateAccel()
 {
 
-  Wire.beginTransmission(0x68);
-  Wire.write(0x3B);
-  Wire.endTransmission();
+  sensors_event_t event;
+  bno_.getEvent(&event);
 
 
-  Wire.requestFrom(0x68, 6);
-
-
-  int16_t AccXLBS = Wire.read() << 8 | Wire.read();
-  int16_t AccYLBS = Wire.read() << 8 | Wire.read();
-  int16_t AccZLBS = Wire.read() << 8 | Wire.read();
-
-
-
-  accX_ = static_cast<float>(AccXLBS) / 4096.0 - accXCalibration_;
-  accY_ = static_cast<float>(AccYLBS) / 4096.0 - accYCalibration_;
-  accZ_ = static_cast<float>(AccZLBS) / 4096.0 - accZCalibration_;
+  accX_ = event.acceleration.x - accXCalibration_;
+  accY_ = event.acceleration.y - accYCalibration_;
+  accZ_ = event.acceleration.z - accZCalibration_;
 
   accX_cal_ = 1.003195 * accX_ + 0.001268 * accY_ + 0.001367 * accZ_;
   accY_cal_ = 0.001268 * accX_ + 0.993899 * accY_ - 0.000891 * accZ_;
@@ -180,24 +154,22 @@ void IMU::updateAccel()
 
 }
 
-void IMU::updateGyro()
+void IMU9DOF::updateGyro()
 {
-  Wire.beginTransmission(0x68);
-  Wire.write(0x43);
-  Wire.endTransmission();
+  sensors_event_t event;
+  bno_.getEvent(&event);
 
-  Wire.requestFrom(0x68, 6);
 
-  int16_t GyroX = Wire.read() << 8 | Wire.read();
-  int16_t GyroY = Wire.read() << 8 | Wire.read();
-  int16_t GyroZ = Wire.read() << 8 | Wire.read();
+  float GyroX = event.gyro.x;
+  float GyroY = event.gyro.y;
+  float GyroZ = event.gyro.z;
 
-  rollRate_ = static_cast<float>(GyroX) / 65.5 - rollCalibration_; 
-  pitchRate_ = static_cast<float>(GyroY) / 65.5 - pitchCalibration_;
-  yawRate_ = static_cast<float>(GyroZ) / 65.5 - yawCalibration_;
+  rollRate_ = GyroX*180.0 / PI - rollCalibration_; 
+  pitchRate_ = GyroY*180.0 / PI - pitchCalibration_;
+  yawRate_ = GyroZ*180.0 / PI - yawCalibration_;
 }
 
-void IMU::detectTakeoff() {
+void IMU9DOF::detectTakeoff() {
   bool takeOffaccelConditions = abs(accX_cal_) > accelThreshold || 
                     abs(accY_cal_) > accelThreshold || 
                     abs(accZ_cal_) > accelThreshold;
@@ -212,7 +184,7 @@ void IMU::detectTakeoff() {
 }
 
 
-void IMU::detectLanding() {
+void IMU9DOF::detectLanding() {
 
   bool landingAccelConditions = abs(accX_cal_) < accelThreshold && 
                          abs(accY_cal_) < accelThreshold && 

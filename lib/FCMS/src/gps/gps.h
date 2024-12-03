@@ -9,7 +9,7 @@ class GPS {
     uint32_t timer_;
 
   public:
-    GPS(HardwareSerial *serial, bool gpsEcho = false);
+    GPS(HardwareSerial *serial=&Serial1, bool gpsEcho = false);
     void setup();
     bool readAndParse();
     void printStats();
