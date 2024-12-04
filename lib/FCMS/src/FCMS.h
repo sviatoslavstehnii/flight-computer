@@ -2,6 +2,8 @@
 #include "barometer/bmp180.h"
 #include "barometer/bmp388.h"
 #include "imu/imu.h"
+#include "imu/imu_9dof.h"
+
 #include "imu/kalman_filter.h"
 #include "flash/flash.h"
 #include "gps/gps.h"
@@ -33,11 +35,38 @@ enum CURRENT_MODE {
   WAYPOINT_GUIDANCE=2
 };
 
+
+class test {
+  private:
+    IMU imu_;
+    BMP280 baro_;
+    BMP388 baro388_;
+    GPS gps_;
+  public:
+    test()= default;
+
+    ~test() = default;
+
+    void setup() {
+       Serial.println("Set up FCMS");
+      Wire.begin();
+
+      baro388_.setup();
+
+      baro_.setup();
+      imu_.setup();
+
+      gps_.setup();
+    }
+
+};
+
 class FCMS {
   private:
     IMU imu_;
     KalmanFilter kf_;
     BMP280 baro_;
+    BMP388 baro388_;
     Flash flash_;
     SDMC sdmc_;
     GPS gps_;
@@ -47,8 +76,11 @@ class FCMS {
     float pitch_ = 0; float roll_ = 0; float yaw_ = 0;
     float altitude_ = 0;
 
-    uint32_t estimateMillis = 0;
-    uint32_t estimateInterval = 40;
+    uint32_t estimateAttitudeMillis = 0;
+    uint32_t estimateAttitudeInterval = 40;
+
+    uint32_t estimateAltitudeMillis = 0;
+    uint32_t estimateAltitudeInterval = 200;
 
     uint32_t commitMillis = 0;
     uint32_t commitInterval = 150;
@@ -73,17 +105,21 @@ class FCMS {
 
   public:
     // FCMS(): flash_(10), kf_(0.004) {};
-    FCMS() : flash_(9), kf_(0.004), gps_(&Serial1) {}
+    FCMS() : flash_(10), kf_(0.004) {}
 
     ~FCMS() = default;
 
     void setup();
+    void checkHealth();
+    void step();
     void updateState();
 
     STATE getState();
     void goToState(STATE state);
     
-    void estimate();
+    void estimateAttitude();
+    void estimateAltitude();
+
     void commitFlash();
     void commitSDMC();
     void monitorHealth();

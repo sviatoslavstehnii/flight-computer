@@ -6,7 +6,6 @@ void IMU9DOF::setup()
 {
   if(!bno_.begin())
   {
-    /* There was a problem detecting the BNO055 ... check your connections */
     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
     while(1);
   }
@@ -27,6 +26,8 @@ void IMU9DOF::printGyroData()
   Serial.print("yaw=");
   Serial.println(getYawRate());
   Serial.println("");
+
+  
 }
 
 void IMU9DOF::printAccelData()
@@ -139,7 +140,6 @@ void IMU9DOF::updateAccel()
 
   sensors_event_t event;
   bno_.getEvent(&event);
-
 
   accX_ = event.acceleration.x - accXCalibration_;
   accY_ = event.acceleration.y - accYCalibration_;

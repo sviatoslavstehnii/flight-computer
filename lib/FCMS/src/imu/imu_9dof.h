@@ -6,7 +6,7 @@
 class IMU9DOF {
   private:
 
-    Adafruit_BNO055 bno_{55, 0x28, &Wire};
+    Adafruit_BNO055 bno_;
     float accX_, accY_, accZ_;
     float accXCalibration_, accYCalibration_, accZCalibration_;
     float accX_cal_, accY_cal_, accZ_cal_;
@@ -41,7 +41,7 @@ class IMU9DOF {
     void detectTakeoff();
 
   public:
-    IMU9DOF() = default;
+    IMU9DOF(): bno_(55, 0x28, &Wire) {};
     ~IMU9DOF() = default;
 
     IMU9DOF(const IMU9DOF&) = delete;

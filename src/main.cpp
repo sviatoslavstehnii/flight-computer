@@ -2,6 +2,11 @@
 #include <FCMS.h>
 
 FCMS fcms{};
+// test t{};
+IMU imu_{};
+BMP280 b280{};
+BMP388 b388;
+GPS gps{};
 
 void setup() {
   Serial.begin(115200);
@@ -19,13 +24,14 @@ void setup() {
   delay(200);
 
   fcms.setup();
+  fcms.checkHealth();
+
+
   Serial.println("STAAART");
 }
 
 
 void loop() {
-  fcms.updateState();
+  fcms.step();
 }
-
-
 

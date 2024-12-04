@@ -3,18 +3,9 @@
 
 void BMP388::setup()
 {
-  if (!bmp_.begin_I2C()) {   // hardware I2C mode, can pass in address & alt Wire
-  //if (! bmp.begin_SPI(BMP_CS)) {  // hardware SPI mode  
-  //if (! bmp.begin_SPI(BMP_CS, BMP_SCK, BMP_MISO, BMP_MOSI)) {  // software SPI mode
-    Serial.println("Could not find a valid BMP3 sensor, check wiring!");
-    while (1);
-  }
-
-  // Set up oversampling and filter initialization
-  bmp_.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
-  bmp_.setPressureOversampling(BMP3_OVERSAMPLING_4X);
-  bmp_.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
-  bmp_.setOutputDataRate(BMP3_ODR_50_HZ);
+  bmp_.begin();                                 // Default initialisation, place the BMP388 into SLEEP_MODE 
+  bmp_.setTimeStandby(TIME_STANDBY_1280MS);
+  bmp_.startNormalConversion();                 // Start BMP388 continuous conversion in NORMAL_MODE  
 
   calibrate();
 }
@@ -22,7 +13,7 @@ void BMP388::setup()
 
 void BMP388::update()
 {
-  bmp_.performReading();
+  bmp_.getAltitude(altitude_);
 }
 
 
@@ -35,13 +26,12 @@ void BMP388::calibrate()
   float maxValue = -FLT_MAX;
 
   for (size_t i = 0; i < 500; ++i) {
-    if(bmp_.performReading()){
+    if(bmp_.getAltitude(altitude_)) {
+    sum += altitude_;
+    n++;
+    if (altitude_ < minValue) minValue = altitude_;
+    if (altitude_ > maxValue) maxValue = altitude_;
 
-      float altitude = bmp_.readAltitude(SEALEVELPRESSURE_HPA);
-      sum += altitude;
-      n++;
-      if (altitude < minValue) minValue = altitude;
-      if (altitude > maxValue) maxValue = altitude;
     }
     delay(10);
   }
@@ -66,8 +56,8 @@ void BMP388::printAltitude()
 
 float BMP388::getAltitude()
 {
-  altitude_ = bmp_.readAltitude(SEALEVELPRESSURE_HPA) - altitudeCalibration_;
-  return altitude_;
+  update();
+  return altitude_ - altitudeCalibration_;
 }
 
 void BMP388::detectApogee()

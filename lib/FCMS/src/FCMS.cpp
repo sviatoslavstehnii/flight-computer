@@ -5,15 +5,12 @@ void FCMS::setup()
 {
   Serial.println("Set up FCMS");
   Wire.begin();
-  delay(100);
 
-  imu_.setup();
-  delay(200);
-
+  baro388_.setup();
   baro_.setup();
-  delay(200);
+  imu_.setup();
+  gps_.setup();
 
-  curr_state_ = SAFE;
 
   // set capacity and erase chip
   flash_.setup(16777216, true);
@@ -23,10 +20,97 @@ void FCMS::setup()
     Serial.println("ERROR: failed to write setup data to flash chip");
   }
 
-  sdmc_.setup();
-  delay(200);
+  // sdmc_.setup();
+
+  curr_state_ = SAFE;
 }
 
+void FCMS::checkHealth()
+{
+
+  Serial.println("Check health of gps...");
+  while (true) {
+    if (gps_.readAndParse()) {
+      auto val = gps_.getLatitude();
+      if (val != 0.0f) {
+        Serial.println("Healthy");
+        break;
+      }
+    }
+  }
+
+  Serial.println("Check health of imu...");
+  float prev_val = 0;
+  while (true) {
+    imu_.update();
+    float new_val = imu_.getAccelX();
+    if (new_val != prev_val && prev_val != 0) {
+      Serial.println("Healthy");
+      break;
+    }
+    prev_val = new_val;
+    delay(10);
+  }
+
+  Serial.println("Check health of barometer388...");
+  prev_val = 0;
+  while (true) {
+    baro388_.update();
+    float new_val = baro388_.getAltitude();
+    if (new_val != prev_val && prev_val != 0) {
+      Serial.println("Healthy");
+      break;
+    }
+    prev_val = new_val;
+    delay(10);
+  }
+
+  Serial.println("Check health of barometer280...");
+  prev_val = 0;
+  while (true) {
+    baro_.update();
+    float new_val = baro_.getAltitude();
+    if (new_val != prev_val && prev_val != 0) {
+      Serial.println("Healthy");
+      break;
+    }
+    prev_val = new_val;
+    delay(10);
+  }
+
+  
+
+  Serial.println("Sensors are ready to work!");
+}
+
+void FCMS::step()
+{
+  STATE state = getState();
+
+
+  if (state != SAFE && state != LANDED) {
+
+    if(millis() - estimateAttitudeMillis >= estimateAttitudeInterval) {
+      estimateAttitudeMillis = millis();
+      estimateAttitude();
+    }
+    if(millis() - estimateAltitudeMillis >= estimateAltitudeInterval) {
+      estimateAltitudeMillis = millis();
+      estimateAltitude();
+    }
+    if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
+      commitMillis = millis();
+      commitFlash();
+    }
+
+    if (millis() - monitorMillis >= monitorInterval) {
+      monitorMillis = millis();
+      Serial.println("check health");
+      monitorHealth();
+    }
+  }
+  updateState();
+}
 
 STATE FCMS::getState()
 {
@@ -38,7 +122,7 @@ void FCMS::goToState(STATE state)
   curr_state_ = state;
 }
 
-void FCMS::estimate()
+void FCMS::estimateAttitude()
 {
   imu_.update();
 
@@ -50,18 +134,25 @@ void FCMS::estimate()
   roll_ = kf_.getAngleRoll();
   yaw_ = kf_.getAngleYaw();
 
+
+  // print for debug
+  Serial.print("pitch: ");
+  Serial.print(pitch_);
+  Serial.print(", ");
+  Serial.print("roll: ");
+  Serial.print(roll_);
+  Serial.print(", ");
+  Serial.print("yaw: ");
+  Serial.println(yaw_);
+}
+
+void FCMS::estimateAltitude()
+{
+
+
   baro_.update();
   altitude_ = baro_.getAltitude();
 
-  // print for debug
-  // Serial.print("pitch: ");
-  // Serial.print(pitch_);
-  // Serial.print(", ");
-  // Serial.print("roll: ");
-  // Serial.print(roll_);
-  // Serial.print(", ");
-  // Serial.print("yaw: ");
-  // Serial.println(yaw_);
 }
 
 void FCMS::commitFlash()
@@ -148,7 +239,6 @@ void FCMS::monitorHealth()
 
 void FCMS::updateState() {
   STATE state = getState();
-
   std::string input_user;
   while (Serial.available() > 0) {
     char c = Serial.read();
@@ -160,24 +250,6 @@ void FCMS::updateState() {
     Serial.println(input_user.c_str());
     goToState(ABORT);
     major_events_q_.push({"ABORT", millis()});
-  }
-
-  if (state != SAFE && state != LANDED) {
-
-    if(millis() - estimateMillis >= estimateInterval) {
-      estimateMillis = millis();
-      estimate();
-    }
-    if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
-      commitMillis = millis();
-      commitFlash();
-    }
-
-    if (millis() - monitorMillis >= monitorInterval) {
-      monitorMillis = millis();
-      Serial.println("check health");
-      monitorHealth();
-    }
   }
 
   switch (state) {

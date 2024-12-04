@@ -1,12 +1,6 @@
-#include <Wire.h>
-#include <SPI.h>
-#include <Adafruit_Sensor.h>
-#include "Adafruit_BMP3XX.h"
+#include <BMP388_DEV.h> 
+
 #include <cfloat>
-
-
-#define SEALEVELPRESSURE_HPA (1013.25)
-
 
 
 #include "barometer.h"
@@ -14,7 +8,7 @@
 
 class BMP388: Barometer {
   private:
-    Adafruit_BMP3XX bmp_;
+    BMP388_DEV bmp_;
     float altitude_ = 0.0;
     float altitudeCalibration_ = 0.0;
     float maxapogee = -FLT_MAX;

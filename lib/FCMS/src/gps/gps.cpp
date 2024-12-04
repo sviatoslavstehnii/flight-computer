@@ -1,14 +1,15 @@
 #include "GPS.h"
 
 GPS::GPS(HardwareSerial *serial, bool gpsEcho)
-  : gps_(serial), gpsEcho_(gpsEcho), timer_(millis()) {}
+  : gps_(&Serial1), gpsEcho_(gpsEcho), timer_(millis()) {}
 
 void GPS::setup() {
   gps_.begin(9600);
   gps_.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   gps_.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
   gps_.sendCommand(PGCMD_ANTENNA);
-  delay(1000);
+  // Ask for firmware version
+  Serial1.println(PMTK_Q_RELEASE);
 }
 
 bool GPS::readAndParse() {
