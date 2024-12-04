@@ -7,7 +7,7 @@
 #define LORA_AUX_PIN 4
 LoRa_E32 loraFCMS(&Serial2, LORA_AUX_PIN);
 
-#define PACKET_TYPE 0x01 // send telemetry fc > gs
+#define PACKET_TYPE 0x01 // send 1 packet of telemetry fc > gs
 
 struct ImuData {
   uint16_t yaw;         // Курс
@@ -111,11 +111,11 @@ void receiveTelemetry(uint8_t *packet, size_t packetSize) {
 void sendTelemetry() {
   /*
   Header 
-  Byte	Part	Type	Description
-  0	    bin	Start Byte
-  1		  bin	Packet Type
-  2		  bin	Sender
-  3		  bin	Receiver
+  Byte	Part	  Type
+  0	    bin	    Start Byte
+  1		  bin	    Packet Type
+  2		  bin	    Sender
+  3		  bin   	Receiver
   4-7		uint32	Timestamp	
   */
   uint8_t packet[58] = {START_BYTE, PACKET_TYPE, SENDER, RECEIVER};
@@ -175,8 +175,6 @@ void sendTelemetry() {
           Bin	Additional Flag 2
           Bin	Additional Flag 3
   */
-
-
 
   // body  
   uint8_t FLIGHT_STATE = 0x01;      // Політний стан (1 біт або більше)
