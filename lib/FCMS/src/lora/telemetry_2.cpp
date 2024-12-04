@@ -163,12 +163,12 @@ void sendExtraTelemetry() {
   // Записуємо обидва стани в один байт
   packet[37] = (FLIGHT_STATE & 0x0F) | ((ADDITIONAL_STATE & 0x0F) << 4);
 
-  uint16_t V_BAT = 0x1234;  // Напруга батареї
-  uint16_t CURR_BAT = 0x5678;  // Струм батареї
+  uint16_t V_BAT_STAND = 0x1234;  // Напруга батареї
+  uint16_t CURR_BAT_STAND = 0x5678;  // Струм батареї
   uint16_t load_cell = 0x9ABC;  // Дані load cell
 
-  memcpy(&packet[38], &V_BAT, sizeof(uint16_t));
-  memcpy(&packet[40], &CURR_BAT, sizeof(uint16_t));
+  memcpy(&packet[38], &V_BAT_STAND, sizeof(uint16_t));
+  memcpy(&packet[40], &CURR_BAT_STAND, sizeof(uint16_t));
   memcpy(&packet[42], &load_cell, sizeof(uint16_t));
 }
 
