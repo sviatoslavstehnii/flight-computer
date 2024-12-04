@@ -36,30 +36,7 @@ enum CURRENT_MODE {
 };
 
 
-class test {
-  private:
-    IMU imu_;
-    BMP280 baro_;
-    BMP388 baro388_;
-    GPS gps_;
-  public:
-    test()= default;
 
-    ~test() = default;
-
-    void setup() {
-       Serial.println("Set up FCMS");
-      Wire.begin();
-
-      baro388_.setup();
-
-      baro_.setup();
-      imu_.setup();
-
-      gps_.setup();
-    }
-
-};
 
 class FCMS {
   private:
@@ -105,7 +82,7 @@ class FCMS {
 
   public:
     // FCMS(): flash_(10), kf_(0.004) {};
-    FCMS() : flash_(10), kf_(0.004) {}
+    FCMS() : flash_(10), kf_(0.04) {}
 
     ~FCMS() = default;
 

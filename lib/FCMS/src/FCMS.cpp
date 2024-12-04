@@ -5,13 +5,6 @@ void FCMS::setup()
 {
   Serial.println("Set up FCMS");
   Wire.begin();
-
-  baro388_.setup();
-  baro_.setup();
-  imu_.setup();
-  gps_.setup();
-
-
   // set capacity and erase chip
   flash_.setup(16777216, true);
   // write first bytes for consistency
@@ -19,6 +12,12 @@ void FCMS::setup()
   if (!flash_.writeToDJ(setup_data, sizeof(setup_data)) ) {
     Serial.println("ERROR: failed to write setup data to flash chip");
   }
+
+  baro388_.setup();
+  baro_.setup();
+  imu_.setup();
+  gps_.setup();
+
 
   // sdmc_.setup();
 
@@ -31,6 +30,7 @@ void FCMS::checkHealth()
   Serial.println("Check health of gps...");
   while (true) {
     if (gps_.readAndParse()) {
+      gps_.printStats();
       auto val = gps_.getLatitude();
       if (val != 0.0f) {
         Serial.println("Healthy");
@@ -102,7 +102,6 @@ void FCMS::step()
       commitMillis = millis();
       commitFlash();
     }
-
     if (millis() - monitorMillis >= monitorInterval) {
       monitorMillis = millis();
       Serial.println("check health");
