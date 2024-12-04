@@ -120,6 +120,7 @@ void IMU::calibrateGyro()
   for (size_t i = 0; i < 2000; ++i) {
 
     updateGyro();
+    // Serial.println(rollRate_);
     tempRollCalibration_ += rollRate_;
     tempPitchCalibration_ += pitchRate_;
     tempYawCalibration_ += yawRate_;

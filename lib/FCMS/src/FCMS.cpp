@@ -83,33 +83,7 @@ void FCMS::checkHealth()
   Serial.println("Sensors are ready to work!");
 }
 
-void FCMS::step()
-{
-  STATE state = getState();
 
-
-  if (state != SAFE && state != LANDED) {
-
-    if(millis() - estimateAttitudeMillis >= estimateAttitudeInterval) {
-      estimateAttitudeMillis = millis();
-      estimateAttitude();
-    }
-    if(millis() - estimateAltitudeMillis >= estimateAltitudeInterval) {
-      estimateAltitudeMillis = millis();
-      estimateAltitude();
-    }
-    if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
-      commitMillis = millis();
-      commitFlash();
-    }
-    if (millis() - monitorMillis >= monitorInterval) {
-      monitorMillis = millis();
-      Serial.println("check health");
-      monitorHealth();
-    }
-  }
-  updateState();
-}
 
 STATE FCMS::getState()
 {
@@ -221,6 +195,30 @@ void FCMS::commitSDMC()
 
 
 
+}
+
+void FCMS::step()
+{
+  STATE state = getState();
+
+
+  if (state != SAFE && state != LANDED) {
+    estimateAttitude();
+    if(millis() - estimateAltitudeMillis >= estimateAltitudeInterval) {
+      estimateAltitudeMillis = millis();
+      estimateAltitude();
+    }
+    if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
+      commitMillis = millis();
+      commitFlash();
+    }
+    if (millis() - monitorMillis >= monitorInterval) {
+      monitorMillis = millis();
+      Serial.println("check health");
+      monitorHealth();
+    }
+  }
+      updateState();
 }
 
 void FCMS::monitorHealth()

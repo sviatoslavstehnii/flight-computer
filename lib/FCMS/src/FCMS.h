@@ -53,8 +53,6 @@ class FCMS {
     float pitch_ = 0; float roll_ = 0; float yaw_ = 0;
     float altitude_ = 0;
 
-    uint32_t estimateAttitudeMillis = 0;
-    uint32_t estimateAttitudeInterval = 40;
 
     uint32_t estimateAltitudeMillis = 0;
     uint32_t estimateAltitudeInterval = 200;
@@ -82,7 +80,7 @@ class FCMS {
 
   public:
     // FCMS(): flash_(10), kf_(0.004) {};
-    FCMS() : flash_(10), kf_(0.04) {}
+    FCMS() : flash_(10), kf_(0.004) {}
 
     ~FCMS() = default;
 
