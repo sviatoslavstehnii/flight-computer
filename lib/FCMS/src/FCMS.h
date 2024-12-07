@@ -5,6 +5,7 @@
 #include "imu/imu_9dof.h"
 
 #include "imu/kalman_filter.h"
+
 #include "flash/flash.h"
 #include "gps/gps.h"
 #include "sdmc/sdmc.h"
@@ -42,7 +43,9 @@ enum CURRENT_MODE {
 class FCMS {
   private:
     IMU imu_;
+    IMU9DOF imu9dof_;
     KalmanFilter kf_;
+    KalmanFilter kf9dof_;
     BMP280 baro_;
     BMP388 baro388_;
     Flash flash_;
@@ -51,7 +54,12 @@ class FCMS {
 
     STATE curr_state_;
 
-    float pitch_ = 0; float roll_ = 0; float yaw_ = 0;
+    struct SensorData{
+      float pitch1, roll1, yaw1 = 0;
+      float pitch2, roll2, yaw2 = 0;
+      float alt1, alt2 = 0;
+      float lon, lat = 0;
+    } sensor_data_;
     float altitude_ = 0;
 
 
@@ -59,7 +67,7 @@ class FCMS {
     uint32_t estimateAltitudeInterval = 200;
 
     uint32_t commitMillis = 0;
-    uint32_t commitInterval = 150;
+    uint32_t commitInterval = 100;
 
     uint32_t monitorMillis = 0;
     uint32_t monitorInterval = 400;
@@ -73,6 +81,7 @@ class FCMS {
     bool pyroOn = false;
     bool dataWrittenToSD = false;
 
+
     unsigned long launchAbortTime = 0;
     unsigned long landingDetectTime = 0;
     unsigned long abortLoopTime = 0;
@@ -80,8 +89,7 @@ class FCMS {
     std::queue<std::pair<char*, uint32_t>> major_events_q_;
 
   public:
-    // FCMS(): flash_(10), kf_(0.004) {};
-    FCMS() : flash_(10), kf_(0.004) {}
+    FCMS() : flash_(10), kf_(0.04), kf9dof_(0.04) {}
 
     ~FCMS() = default;
 
@@ -95,12 +103,10 @@ class FCMS {
     
     void estimateAttitude();
     void estimateAltitude();
+    void estimateGPS();
 
     void commitFlash();
     void commitSDMC();
-    void monitorHealth();
-
-
 
     
 };

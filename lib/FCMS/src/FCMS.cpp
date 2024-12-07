@@ -16,10 +16,9 @@ void FCMS::setup()
   baro388_.setup();
   baro_.setup();
   imu_.setup();
+  imu9dof_.setup();  
   gps_.setup();
-
-
-  // sdmc_.setup();
+  sdmc_.setup();
 
   curr_state_ = SAFE;
 }
@@ -44,6 +43,20 @@ void FCMS::checkHealth()
   while (true) {
     imu_.update();
     float new_val = imu_.getAccelX();
+    if (new_val != prev_val && prev_val != 0) {
+      Serial.println("Healthy");
+      break;
+    }
+    prev_val = new_val;
+    delay(10);
+  }
+
+  Serial.println("Check health of imu9dof...");
+  prev_val = 0;
+  while (true) {
+    imu9dof_.update();
+    imu9dof_.printAccelData();
+    float new_val = imu9dof_.getAccelX();
     if (new_val != prev_val && prev_val != 0) {
       Serial.println("Healthy");
       break;
@@ -97,26 +110,45 @@ void FCMS::goToState(STATE state)
 
 void FCMS::estimateAttitude()
 {
+  float rollRate, angleRoll, pitchRate, anglePitch = 0.0f;
+  //first imu
+  imu9dof_.update();
+  rollRate = imu9dof_.getRollRate();
+  angleRoll = imu9dof_.getAngleRoll();
+
+  pitchRate = imu9dof_.getPitchRate();
+  anglePitch = imu9dof_.getAnglePitch();
+
+  kf9dof_.updateRoll(rollRate, angleRoll);
+  kf9dof_.updatePitch(pitchRate, anglePitch);
+  sensor_data_.pitch1 = kf9dof_.getAnglePitch();
+  sensor_data_.roll1 = kf9dof_.getAngleRoll();
+  sensor_data_.yaw1 = imu9dof_.getYawRate();
+  
+  // second imu
   imu_.update();
-
-  kf_.updateRoll(imu_.getRollRate(), imu_.getAngleRoll());
-  kf_.updatePitch(imu_.getPitchRate(), imu_.getAnglePitch());
+  rollRate = imu_.getRollRate();
+  angleRoll = imu_.getAngleRoll();
+  pitchRate = imu_.getPitchRate();
+  anglePitch = imu_.getAnglePitch();
   kf_.updateYaw(imu_.getYawRate());
+  kf_.updateRoll(rollRate, angleRoll);
+  kf_.updatePitch(pitchRate, anglePitch);
 
-  pitch_ = kf_.getAnglePitch();
-  roll_ = kf_.getAngleRoll();
-  yaw_ = kf_.getAngleYaw();
+  sensor_data_.pitch2 = kf_.getAnglePitch();
+  sensor_data_.roll2 = kf_.getAngleRoll();
+  sensor_data_.yaw2 = kf_.getAngleYaw();
 
 
   // print for debug
   Serial.print("pitch: ");
-  Serial.print(pitch_);
+  Serial.print(sensor_data_.pitch1);
   Serial.print(", ");
   Serial.print("roll: ");
-  Serial.print(roll_);
+  Serial.print(sensor_data_.roll1);
   Serial.print(", ");
   Serial.print("yaw: ");
-  Serial.println(yaw_);
+  Serial.println(sensor_data_.yaw1);
 }
 
 void FCMS::estimateAltitude()
@@ -124,16 +156,31 @@ void FCMS::estimateAltitude()
 
 
   baro_.update();
-  altitude_ = baro_.getAltitude();
+  sensor_data_.alt1 = baro_.getAltitude();
 
+  baro388_.update();
+  sensor_data_.alt2 = baro388_.getAltitude();
+
+}
+
+void FCMS::estimateGPS()
+{
+  if (gps_.readAndParse()){
+    sensor_data_.lat = gps_.getLatitude();
+    sensor_data_.lon = gps_.getLongitude();
+  }
 }
 
 void FCMS::commitFlash()
 {
 
   std::ostringstream data_msg;
-  data_msg << "Pitch:" << std::fixed << std::setprecision(2) << pitch_ << ",Roll: " << std::fixed << std::setprecision(2) << roll_ 
-    << ",Yaw: " << std::fixed << std::setprecision(2) << yaw_ << ",Alt:" << std::fixed << std::setprecision(2) << altitude_ << ";"<< getState();
+  data_msg << "Pitch:" << std::fixed << std::setprecision(2) << sensor_data_.pitch1 <<
+   ",Roll: " << std::fixed << std::setprecision(2) << sensor_data_.roll1 
+  << ",Yaw: " << std::fixed << std::setprecision(2) << sensor_data_.yaw1
+  << ",Alt:" << std::fixed << std::setprecision(2) << sensor_data_.alt1
+  << ",Lat:" << std::fixed << std::setprecision(2) << sensor_data_.lat
+  << ",Lon:" << std::fixed << std::setprecision(2) << sensor_data_.lon << ";"<< getState();
   std::string data_msg_str = data_msg.str();
 
   char data_buf[data_msg_str.size() + 1];
@@ -143,6 +190,24 @@ void FCMS::commitFlash()
   if (!flash_.writeToDJ(data_buf, sizeof(data_buf))) {
     Serial.println("error");
   }
+
+  std::ostringstream data_msg2;
+  data_msg2 << "|2|Pitch:" << std::fixed << std::setprecision(2) << sensor_data_.pitch2
+          << ",Roll: " << std::fixed << std::setprecision(2) << sensor_data_.roll2
+          << ",Yaw: " << std::fixed << std::setprecision(2) << sensor_data_.yaw2
+          << ",Alt:" << std::fixed << std::setprecision(2) << sensor_data_.alt2 
+          << ";" << getState();
+
+  std::string data_msg_str2 = data_msg2.str();
+
+  char data_buf2[data_msg_str2.size() + 1];
+  std::copy(data_msg_str2.begin(), data_msg_str2.end(), data_buf2);
+  data_buf2[data_msg_str2.size()] = '\0';
+
+  if (!flash_.writeToDJ(data_buf2, sizeof(data_buf2))) {
+      Serial.println("Error writing data");
+  }
+
 
   while ( !major_events_q_.empty()) {
     std::pair<char *, uint32_t> event = major_events_q_.front();
@@ -212,27 +277,11 @@ void FCMS::step()
       commitMillis = millis();
       commitFlash();
     }
-    if (millis() - monitorMillis >= monitorInterval) {
-      monitorMillis = millis();
-      Serial.println("check health");
-      monitorHealth();
-    }
   }
       updateState();
 }
 
-void FCMS::monitorHealth()
-{
-  Wire.beginTransmission(0x68);
-  if (!Wire.endTransmission() == 0) {
-    major_events_q_.push({"IMU_FAILURE", millis()});
-  }
 
-  Wire.beginTransmission(0x76);
-  if (!Wire.endTransmission() == 0) {
-    major_events_q_.push({"BAROMETER_FAILURE", millis()});
-  }
-}
 
 void FCMS::updateState() {
   STATE state = getState();
