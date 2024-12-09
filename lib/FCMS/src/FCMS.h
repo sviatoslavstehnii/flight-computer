@@ -78,6 +78,9 @@ class FCMS {
     uint32_t monitorMillis = 0;
     uint32_t monitorInterval = 400;
 
+    uint32_t buzzerMillis = 0;
+
+
     
 
     bool firstlaunch = true;

@@ -24,7 +24,7 @@ bool GPS::readAndParse() {
 }
 
 void GPS::printStats() {
-  if (millis() - timer_ > 2000) {
+  // if (millis() - timer_ > 2000) {
     timer_ = millis();
 
     Serial.print("\nTime: ");
@@ -42,7 +42,7 @@ void GPS::printStats() {
         printLocation();
         printOtherStats();
     }
-  }
+  // }
 }
 
 void GPS::printTime() {

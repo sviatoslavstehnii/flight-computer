@@ -13,7 +13,7 @@ void IMU9DOF::setup()
   bno_.setMode(OPERATION_MODE_NDOF);
 
 
-  calibrate();
+  // calibrate();
 
 }
 

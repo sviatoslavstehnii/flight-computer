@@ -13,14 +13,26 @@ void FCMS::setup()
     Serial.println("ERROR: failed to write setup data to flash chip");
   }
 
+  gps_.setup();
+  Serial.println("Check health of gps...");
+  while (true) {
+    if (gps_.readAndParse()) {
+      gps_.printStats();
+      auto val = gps_.getLatitude();
+      if (val != 0.0f) {
+        Serial.println("Healthy");
+        break;
+      }
+    }
+  }
+
   baro388_.setup();
   baro_.setup();
   imu_.setup();
   imu9dof_.setup();  
-  // gps_.setup();
   sdmc_.setup();
 
-  curr_state_ = SAFE;
+  curr_state_ = LAUNCH;
 }
 
 void FCMS::checkHealth()
@@ -279,26 +291,31 @@ void FCMS::step()
     if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = millis();
       commitFlash();
-      Serial.print("{\"roll\":");
-      Serial.print(sensor_data_.roll1, 2);
-      Serial.print(",\"pitch\":");
-      Serial.print(sensor_data_.pitch1, 2);
-      Serial.print(",\"yaw\":");
-      Serial.print(sensor_data_.yaw1, 2);
-      Serial.print(",\"lat\":");
-      Serial.print(sensor_data_.lat, 6);
-      Serial.print(",\"lon\":");
-      Serial.print(sensor_data_.lon, 6);
-      Serial.print(",\"alt\":");
-      Serial.print(sensor_data_.alt1, 2);
-      Serial.print(",\"state\":");
-      Serial.print(state);
-      Serial.println("}");
+      // Serial.print("{\"roll\":");
+      // Serial.print(sensor_data_.roll1, 2);
+      // Serial.print(",\"pitch\":");
+      // Serial.print(sensor_data_.pitch1, 2);
+      // Serial.print(",\"yaw\":");
+      // Serial.print(sensor_data_.yaw1, 2);
+      // Serial.print(",\"lat\":");
+      // Serial.print(sensor_data_.lat, 6);
+      // Serial.print(",\"lon\":");
+      // Serial.print(sensor_data_.lon, 6);
+      // Serial.print(",\"alt\":");
+      // Serial.print(sensor_data_.alt1, 2);
+      // Serial.print(",\"state\":");
+      // Serial.print(state);
+      // Serial.println("}");
     }
 
     if (millis() - estimateGPSMillis >= estimateGPSInterval) {
       estimateGPSMillis = millis();
       estimateGPS();
+    }
+
+    if (millis() - buzzerMillis >= 15000) {
+      buzzerMillis = millis();
+      digitalWrite(BUZZER_PIN, LOW);
     }
   }
   updateState();
@@ -354,6 +371,10 @@ void FCMS::updateState() {
 
   case LAUNCH:
     // Serial.println("LAUNCH");
+    if (!dataLogingStarted) {
+      Serial.println("Start writing data to flash");
+      dataLogingStarted = true;
+    }
     if (firstlaunch) {
       launchAbortTime = millis();
       firstlaunch = false;
@@ -375,8 +396,7 @@ void FCMS::updateState() {
       Serial.println("Takeoff detected!");
       goToState(FLIGHT);
       digitalWrite(BUZZER_PIN, HIGH);
-  delay(1000);
-  digitalWrite(BUZZER_PIN, LOW);
+
       major_events_q_.push({"FLIGHT", millis()});
     }
     break;
@@ -395,8 +415,7 @@ void FCMS::updateState() {
       Serial.println(baro_.getMaxApogee());
       goToState(DESCENT);
       digitalWrite(BUZZER_PIN, HIGH);
-  delay(1000);
-  digitalWrite(BUZZER_PIN, LOW);
+
       major_events_q_.push({"DESCENT", millis()});
     }
 
@@ -452,8 +471,7 @@ void FCMS::updateState() {
       Serial.println("Landing detected!");
       goToState(LANDED);
       digitalWrite(BUZZER_PIN, HIGH);
-  delay(1000);
-  digitalWrite(BUZZER_PIN, LOW);
+
       major_events_q_.push({"LANDED", millis()});
     }
 
@@ -488,8 +506,7 @@ void FCMS::updateState() {
     if (millis() - abortLoopTime > 15000)
     {
       digitalWrite(BUZZER_PIN, HIGH);
-  delay(1000);
-  digitalWrite(BUZZER_PIN, LOW);
+
       goToState(LANDED);
       major_events_q_.push({"LANDED", millis()});
     }
