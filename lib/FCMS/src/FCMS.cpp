@@ -279,6 +279,26 @@ void FCMS::step()
     if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = millis();
       commitFlash();
+      Serial.print("{\"roll\":");
+      Serial.print(sensor_data_.roll1, 2);
+      Serial.print(",\"pitch\":");
+      Serial.print(sensor_data_.pitch1, 2);
+      Serial.print(",\"yaw\":");
+      Serial.print(sensor_data_.yaw1, 2);
+      Serial.print(",\"lat\":");
+      Serial.print(sensor_data_.lat, 6);
+      Serial.print(",\"lon\":");
+      Serial.print(sensor_data_.lon, 6);
+      Serial.print(",\"alt\":");
+      Serial.print(sensor_data_.alt1, 2);
+      Serial.print(",\"state\":");
+      Serial.print(state);
+      Serial.println("}");
+    }
+
+    if (millis() - estimateGPSMillis >= estimateGPSInterval) {
+      estimateGPSMillis = millis();
+      estimateGPS();
     }
   }
   updateState();

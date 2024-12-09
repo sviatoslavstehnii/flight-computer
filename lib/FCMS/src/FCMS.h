@@ -66,6 +66,9 @@ class FCMS {
     uint32_t estimateAltitudeMillis = 0;
     uint32_t estimateAltitudeInterval = 200;
 
+    uint32_t estimateGPSMillis = 0;
+    uint32_t estimateGPSInterval = 300;
+
     uint32_t commitMillis = 0;
     uint32_t commitInterval = 100;
 
