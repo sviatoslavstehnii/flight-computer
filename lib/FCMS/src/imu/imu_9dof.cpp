@@ -134,8 +134,8 @@ void IMU9DOF::updateGyro()
   imu::Vector<3> gyro = bno_.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
   imu::Vector<3> euler = bno_.getVector(Adafruit_BNO055::VECTOR_EULER);
 
-  rollRate_ = gyro.x() ; 
-  pitchRate_ = gyro.y();
+  rollRate_ = euler.y() ; 
+  pitchRate_ = euler.z();
   yawRate_ = euler.x();
 }
 

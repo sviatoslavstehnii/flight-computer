@@ -17,7 +17,7 @@ void FCMS::setup()
   baro_.setup();
   imu_.setup();
   imu9dof_.setup();  
-  gps_.setup();
+  // gps_.setup();
   sdmc_.setup();
 
   curr_state_ = SAFE;
@@ -55,7 +55,6 @@ void FCMS::checkHealth()
   prev_val = 0;
   while (true) {
     imu9dof_.update();
-    imu9dof_.printAccelData();
     float new_val = imu9dof_.getAccelX();
     if (new_val != prev_val && prev_val != 0) {
       Serial.println("Healthy");
@@ -113,16 +112,20 @@ void FCMS::estimateAttitude()
   float rollRate, angleRoll, pitchRate, anglePitch = 0.0f;
   //first imu
   imu9dof_.update();
-  rollRate = imu9dof_.getRollRate();
-  angleRoll = imu9dof_.getAngleRoll();
+  // rollRate = imu9dof_.getRollRate();
+  // angleRoll = imu9dof_.getAngleRoll();
 
-  pitchRate = imu9dof_.getPitchRate();
-  anglePitch = imu9dof_.getAnglePitch();
+  // pitchRate = imu9dof_.getPitchRate();
+  // anglePitch = imu9dof_.getAnglePitch();
 
-  kf9dof_.updateRoll(rollRate, angleRoll);
-  kf9dof_.updatePitch(pitchRate, anglePitch);
-  sensor_data_.pitch1 = kf9dof_.getAnglePitch();
-  sensor_data_.roll1 = kf9dof_.getAngleRoll();
+  // kf9dof_.updateRoll(rollRate, angleRoll);
+  // kf9dof_.updatePitch(pitchRate, anglePitch);
+  // sensor_data_.pitch1 = kf9dof_.getAnglePitch();
+  // sensor_data_.roll1 = kf9dof_.getAngleRoll();
+  // sensor_data_.yaw1 = imu9dof_.getYawRate();
+
+  sensor_data_.pitch1 = imu9dof_.getPitchRate();
+  sensor_data_.roll1 = imu9dof_.getRollRate();
   sensor_data_.yaw1 = imu9dof_.getYawRate();
   
   // second imu
@@ -278,7 +281,8 @@ void FCMS::step()
       commitFlash();
     }
   }
-      updateState();
+  updateState();
+
 }
 
 
