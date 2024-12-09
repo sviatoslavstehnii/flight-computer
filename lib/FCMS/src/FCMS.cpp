@@ -319,6 +319,7 @@ void FCMS::updateState() {
     Serial.print("i got frrom uses input ");
     Serial.println(input_user.c_str());
     goToState(ABORT);
+    
     major_events_q_.push({"ABORT", millis()});
   }
 
@@ -373,6 +374,9 @@ void FCMS::updateState() {
     if (imu_.getTakeoffDetected()) {
       Serial.println("Takeoff detected!");
       goToState(FLIGHT);
+      digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
       major_events_q_.push({"FLIGHT", millis()});
     }
     break;
@@ -390,6 +394,9 @@ void FCMS::updateState() {
       Serial.print("Max apogee: ");
       Serial.println(baro_.getMaxApogee());
       goToState(DESCENT);
+      digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
       major_events_q_.push({"DESCENT", millis()});
     }
 
@@ -444,6 +451,9 @@ void FCMS::updateState() {
     if (imu_.getLandingDetected()) {
       Serial.println("Landing detected!");
       goToState(LANDED);
+      digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
       major_events_q_.push({"LANDED", millis()});
     }
 
@@ -477,6 +487,9 @@ void FCMS::updateState() {
 
     if (millis() - abortLoopTime > 15000)
     {
+      digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
       goToState(LANDED);
       major_events_q_.push({"LANDED", millis()});
     }

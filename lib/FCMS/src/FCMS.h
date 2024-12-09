@@ -17,6 +17,9 @@
 #include <iostream>
 #include <queue>
 
+
+#define BUZZER_PIN 28
+
 // FCMS lib
 // Flight Computer Managment System 
 enum STATE {

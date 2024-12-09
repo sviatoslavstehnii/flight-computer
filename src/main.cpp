@@ -1,33 +1,50 @@
 #include <Arduino.h>
 #include <FCMS.h>
 
-// FCMS fcms{};
-
-// void setup() {
-//   Serial.begin(115200);
-//   while (!Serial);
-//   Serial.println("Starting...");
-//   #ifdef MASTER_MODE
-//     Serial.println("Running in MASTER mode");
-//   #elif defined(SLAVE_MODE)
-//     Serial.println("Running in SLAVE mode");
-//   #else
-//     Serial.println("No mode defined. Please set build flag!");
-//   #endif
-
-//   Wire.begin();
-//   delay(200);
-
-//   fcms.setup();
-//   fcms.checkHealth();
-
-//   Serial.println("STAAART");
-// }
+#define BUZZER_PIN 28
+FCMS fcms{};
 
 
-// void loop() {
-//   fcms.step();
-// }
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial);
+  Serial.println("Starting...");
+  #ifdef MASTER_MODE
+    Serial.println("Running in MASTER mode");
+  #elif defined(SLAVE_MODE)
+    Serial.println("Running in SLAVE mode");
+  #else
+    Serial.println("No mode defined. Please set build flag!");
+  #endif
+
+  Wire.begin();
+  delay(200);
+
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  fcms.setup();
+
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
+  fcms.checkHealth();
+
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  Serial.println("STAAART");
+}
+
+
+void loop() {
+  fcms.step();
+}
 
 
 // Flash flash_{10};
@@ -66,6 +83,7 @@
 // void loop() {}
 
 
+#if 0
 IMU9DOF imu9dof_{};
 GPS gps_{};
 BMP388 bmp388_{};
@@ -94,6 +112,7 @@ void setup() {
 
   Serial.println("STAAART");
 }
+
 
 
 void loop() {
@@ -139,3 +158,5 @@ void loop() {
     Serial.println("}");
     delay(100);
 }
+
+#endif
