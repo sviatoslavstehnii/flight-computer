@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import RotatingModel from "./RotatingModel";
 import PositionPlot from "./PositionPlot";
+import "./App.css";
 
 export default function App() {
   const [eulerAngles, setEulerAngles] = useState({ x: 0, y: 0, z: 0 });
@@ -18,7 +19,7 @@ export default function App() {
         latitude: data.lat || 0,
         longitude: data.lon || 0,
       });
-      setHeight( data.alt || 0);
+      setHeight(data.alt || 0);
       setEulerAngles({
         x: data.pitch || 0,
         y: -data.roll || 0,
@@ -35,18 +36,22 @@ export default function App() {
   }, []);
 
   return (
-    <div>
-      <div>
-        <h1>GPS Data</h1>
-        <p>Latitude: {gpsData.latitude}</p>
-        <p>Longitude: {gpsData.longitude}</p>
-        <p>Height: {height}</p>
-        <p>Rotation:</p>
-        <p>x: {eulerAngles.x.toFixed(2)}</p>
-        <p>y: {eulerAngles.y.toFixed(2)}</p>
-        <p>z: {eulerAngles.z.toFixed(2)}</p>
+    <div
+      style={{
+        height: "100vh",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <h1 className="data-header">Sensors Data</h1>
+      <div className="data-container">
+        <p className="data">Height: {height}</p>
+        <p className="data">x: {eulerAngles.x.toFixed(2)}</p>
+        <p className="data">y: {eulerAngles.y.toFixed(2)}</p>
+        <p className="data">z: {eulerAngles.z.toFixed(2)}</p>
       </div>
-      <div style={{ flex: 1, display: "flex", height:"100vh" }}>
+      <div style={{ flex: 1, display: "flex", height: "100vh" }}>
         <div style={{ flex: 1 }}>
           <Canvas camera={{ fov: 45, position: [0, 0, 5] }}>
             <ambientLight intensity={0.5} />
