@@ -15,10 +15,14 @@ const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
 
 console.log('Serial port is open');
 
+let fst_message_received = false;
+let fst_message = null;
+
+
 // Parse the serial data into roll, pitch, yaw in radians
 function parseSerialData(line) {
   const data = JSON.parse(line);
-  const att = {
+  return {
     roll: (data.roll * Math.PI) / 180,
     pitch: (data.pitch * Math.PI) / 180,
     yaw: (data.yaw * Math.PI) / 180,
@@ -26,26 +30,31 @@ function parseSerialData(line) {
     longitude: data.lon,
     alt: data.alt
   };
-  return att;
 }
 
 // Listen to Serial data
 parser.on('data', (line) => {
-  try {
-    console.log('Raw data:', line);
-    // const att = parseSerialData(line); // Convert to radians
-    const att = getRandomInRange(-Math.PI, Math.PI, 2); // Convert to radians
-    console.log('Parsed data (radians):', att);
 
-    // Add random GPS and alt data
+  try {
+    if (!fst_message_received) {
+      fst_message = parseSerialData(line);
+      fst_message_received = true;
+    }
+    // console.log('Raw data:', line);
+    const att = parseSerialData(line);
+
+    // const att = getRandomInRange(-Math.PI, Math.PI, 2); // Convert to radians
+
     const data = {
-      roll: att.roll,
-      pitch: att.pitch,
-      yaw: att.yaw,
+      roll: att.roll - fst_message.roll,
+      pitch: att.pitch - fst_message.pitch,
+      yaw: att.yaw - fst_message.yaw,
       lat: att.lat,
       lon: att.lon,
-      alt: att.alt,
+      alt: att.alt 
     };
+
+    console.log('Parsed data:', data);
 
     // Broadcast data to all WebSocket clients
     wss.clients.forEach((client) => {

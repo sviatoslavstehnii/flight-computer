@@ -13,7 +13,7 @@ void IMU9DOF::setup()
   bno_.setMode(OPERATION_MODE_NDOF);
 
 
-  // calibrate();
+  calibrate();
 
 }
 
@@ -95,7 +95,7 @@ while (true) {
     Serial.print(", MAG=");
     Serial.println(mag);
 
-    if (system == 3 && accel == 3 && gyro == 3 && mag == 3) {
+    if (system == 3 && accel >= 3 && gyro >= 1 && mag == 3) {
       break;
     }
 

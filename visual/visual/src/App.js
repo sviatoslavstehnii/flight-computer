@@ -20,9 +20,9 @@ export default function App() {
       });
       setHeight( data.alt || 0);
       setEulerAngles({
-        x: data.roll || 0,
-        y: -data.yaw || 0,
-        z: -data.roll || 0,
+        x: data.pitch || 0,
+        y: -data.roll || 0,
+        z: data.yaw || 0,
       });
       setState({
         state: data.state || 0,
@@ -46,7 +46,7 @@ export default function App() {
         <p>y: {eulerAngles.y.toFixed(2)}</p>
         <p>z: {eulerAngles.z.toFixed(2)}</p>
       </div>
-      <div style={{ flex: 1, display: "flex" }}>
+      <div style={{ flex: 1, display: "flex", height:"100vh" }}>
         <div style={{ flex: 1 }}>
           <Canvas camera={{ fov: 45, position: [0, 0, 5] }}>
             <ambientLight intensity={0.5} />
