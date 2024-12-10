@@ -8,10 +8,14 @@ void SDMC::setup()
     Serial.println("2. is your wiring correct?");
     Serial.println("3. did you change the chipSelect pin to match your shield or module?");
     Serial.println("Note: press reset button on the board and reopen this Serial Monitor after fixing your issue!");
-    while (true);
-  }
+  } else {
 
   Serial.println("SD card initialization done.");
+    digitalWrite(28, HIGH);
+      delay(140);
+      digitalWrite(28, LOW);
+  }
+
 }
 
 bool SDMC::write(const char * filename, const char * text)

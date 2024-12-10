@@ -207,7 +207,7 @@ void IMU::detectTakeoff() {
                     abs(pitchRate_) > gyroThreshold ||
                     abs(yawRate_) > gyroThreshold;
 
-  if (takeOffaccelConditions && takeOffgyroConditions) {
+  if (takeOffaccelConditions) {
     takeoffDetected = true;
   }
 }

@@ -55,6 +55,8 @@ class FCMS {
     SDMC sdmc_;
     GPS gps_;
 
+    int land = 0;
+
     STATE curr_state_;
 
     struct SensorData{

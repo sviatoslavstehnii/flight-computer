@@ -4,7 +4,7 @@
 #define BUZZER_PIN 28
 
 FCMS fcms{};
-
+SDMC sd{};
 
 void setup() {
   // Serial.begin(115200);
@@ -30,6 +30,7 @@ void setup() {
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
+
   fcms.setup();
 
   digitalWrite(BUZZER_PIN, HIGH);
@@ -49,7 +50,7 @@ void setup() {
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // Serial.println("STAAART");
+  Serial.println("STAAART");
 }
 
 

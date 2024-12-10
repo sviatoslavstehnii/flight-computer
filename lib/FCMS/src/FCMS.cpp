@@ -5,6 +5,30 @@ void FCMS::setup()
 {
   Serial.println("Set up FCMS");
   Wire.begin();
+  sdmc_.setup();
+
+  gps_.setup();
+  baro388_.setup();
+  baro_.setup();
+  imu_.setup();
+  imu9dof_.setup();  
+  delay(20000);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(140);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(140);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(140);
+  digitalWrite(BUZZER_PIN, LOW);
+    delay(140);
+
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(140);
+  digitalWrite(BUZZER_PIN, LOW);
+  delay(140);
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(140);
+  digitalWrite(BUZZER_PIN, LOW);
   // set capacity and erase chip
   flash_.setup(16777216, true);
   // write first bytes for consistency
@@ -12,26 +36,6 @@ void FCMS::setup()
   if (!flash_.writeToDJ(setup_data, sizeof(setup_data)) ) {
     Serial.println("ERROR: failed to write setup data to flash chip");
   }
-
-  gps_.setup();
-  Serial.println("Check health of gps...");
-  while (true) {
-    if (gps_.readAndParse()) {
-      gps_.printStats();
-      auto val = gps_.getLatitude();
-      if (val != 0.0f) {
-        Serial.println("Healthy");
-        break;
-      }
-    }
-  }
-
-  baro388_.setup();
-  baro_.setup();
-  imu_.setup();
-  imu9dof_.setup();  
-  sdmc_.setup();
-
   curr_state_ = LAUNCH;
 }
 
@@ -156,14 +160,14 @@ void FCMS::estimateAttitude()
 
 
   // print for debug
-  Serial.print("pitch: ");
-  Serial.print(sensor_data_.pitch1);
-  Serial.print(", ");
-  Serial.print("roll: ");
-  Serial.print(sensor_data_.roll1);
-  Serial.print(", ");
-  Serial.print("yaw: ");
-  Serial.println(sensor_data_.yaw1);
+  // Serial.print("pitch: ");
+  // Serial.print(sensor_data_.pitch1);
+  // Serial.print(", ");
+  // Serial.print("roll: ");
+  // Serial.print(sensor_data_.roll1);
+  // Serial.print(", ");
+  // Serial.print("yaw: ");
+  // Serial.println(sensor_data_.yaw1);
 }
 
 void FCMS::estimateAltitude()
@@ -181,6 +185,7 @@ void FCMS::estimateAltitude()
 void FCMS::estimateGPS()
 {
   if (gps_.readAndParse()){
+    Serial.println("GPS data:");
     sensor_data_.lat = gps_.getLatitude();
     sensor_data_.lon = gps_.getLongitude();
   }
@@ -254,6 +259,7 @@ void FCMS::commitSDMC()
     }
     if (!sdmc_.write("dj.txt", read_data)) {
       Serial.println("error while writing to file");
+      break;
     }
     bytes_read += strlen(read_data);
   }
@@ -269,6 +275,7 @@ void FCMS::commitSDMC()
     }
     if (!sdmc_.write("mej.txt", read_data)) {
       Serial.println("error while writing to file");
+      break;
     }
     bytes_read += strlen(read_data);
   }
@@ -291,21 +298,21 @@ void FCMS::step()
     if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = millis();
       commitFlash();
-      // Serial.print("{\"roll\":");
-      // Serial.print(sensor_data_.roll1, 2);
-      // Serial.print(",\"pitch\":");
-      // Serial.print(sensor_data_.pitch1, 2);
-      // Serial.print(",\"yaw\":");
-      // Serial.print(sensor_data_.yaw1, 2);
-      // Serial.print(",\"lat\":");
-      // Serial.print(sensor_data_.lat, 6);
-      // Serial.print(",\"lon\":");
-      // Serial.print(sensor_data_.lon, 6);
-      // Serial.print(",\"alt\":");
-      // Serial.print(sensor_data_.alt1, 2);
-      // Serial.print(",\"state\":");
-      // Serial.print(state);
-      // Serial.println("}");
+      Serial.print("{\"roll\":");
+      Serial.print(sensor_data_.roll1, 2);
+      Serial.print(",\"pitch\":");
+      Serial.print(sensor_data_.pitch1, 2);
+      Serial.print(",\"yaw\":");
+      Serial.print(sensor_data_.yaw1, 2);
+      Serial.print(",\"lat\":");
+      Serial.print(sensor_data_.lat, 6);
+      Serial.print(",\"lon\":");
+      Serial.print(sensor_data_.lon, 6);
+      Serial.print(",\"alt\":");
+      Serial.print(sensor_data_.alt1, 2);
+      Serial.print(",\"state\":");
+      Serial.print(state);
+      Serial.println("}");
     }
 
     if (millis() - estimateGPSMillis >= estimateGPSInterval) {
@@ -313,10 +320,10 @@ void FCMS::step()
       estimateGPS();
     }
 
-    if (millis() - buzzerMillis >= 15000) {
-      buzzerMillis = millis();
-      digitalWrite(BUZZER_PIN, LOW);
-    }
+    // if (millis() - buzzerMillis >= 1500) {
+    //   buzzerMillis = millis();
+    //   digitalWrite(BUZZER_PIN, LOW);
+    // } 
   }
   updateState();
 
@@ -370,7 +377,7 @@ void FCMS::updateState() {
     break;
 
   case LAUNCH:
-    // Serial.println("LAUNCH");
+    Serial.println("LAUNCH");
     if (!dataLogingStarted) {
       Serial.println("Start writing data to flash");
       dataLogingStarted = true;
@@ -387,7 +394,7 @@ void FCMS::updateState() {
     }
         
 
-    if (millis() - launchAbortTime > 5000) {
+    if (millis() - launchAbortTime > 500000) {
       goToState(ABORT);
       major_events_q_.push({"ABORT", millis()});
     }
@@ -396,6 +403,8 @@ void FCMS::updateState() {
       Serial.println("Takeoff detected!");
       goToState(FLIGHT);
       digitalWrite(BUZZER_PIN, HIGH);
+      delay(1000);
+      digitalWrite(BUZZER_PIN, LOW);
 
       major_events_q_.push({"FLIGHT", millis()});
     }
@@ -468,11 +477,19 @@ void FCMS::updateState() {
     delay(300);
     imu_.detectLanding();
     if (imu_.getLandingDetected()) {
-      Serial.println("Landing detected!");
+      ++land;
+    } else {
+      land = 0;
+    }
+    if (land > 20) {
+    Serial.println("Landing detected!");
       goToState(LANDED);
       digitalWrite(BUZZER_PIN, HIGH);
+      delay(1000);
+      digitalWrite(BUZZER_PIN, LOW);
 
       major_events_q_.push({"LANDED", millis()});
+
     }
 
     break;
@@ -488,7 +505,7 @@ void FCMS::updateState() {
       }
     break;
   case ABORT:
-    // Serial.println("ABORT");
+    Serial.println("ABORT");
 
     if (firstAbortLoop)
     {
@@ -506,6 +523,9 @@ void FCMS::updateState() {
     if (millis() - abortLoopTime > 15000)
     {
       digitalWrite(BUZZER_PIN, HIGH);
+      delay(1000);
+      digitalWrite(BUZZER_PIN, LOW);
+
 
       goToState(LANDED);
       major_events_q_.push({"LANDED", millis()});
