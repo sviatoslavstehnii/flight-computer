@@ -16,7 +16,7 @@ export default function RotatingRectangle({ eulerAngles }) {
   return (
     <Stage>
       <mesh ref={rectangleRef}>
-        <boxGeometry args={[1, .5, 2]} /> 
+        <boxGeometry args={[1, .2, 2]} /> 
         <meshStandardMaterial color="green" />
       </mesh>
     </Stage>

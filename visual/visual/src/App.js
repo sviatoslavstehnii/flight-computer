@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import RotatingModel from "./RotatingModel";
 import PositionPlot from "./PositionPlot";
 import "./App.css";
+import HeightTimePlot from "./HeightTimePlot";
 
 export default function App() {
   const [eulerAngles, setEulerAngles] = useState({ x: 0, y: 0, z: 0 });
@@ -52,15 +53,15 @@ export default function App() {
         <p className="data">z: {eulerAngles.z.toFixed(2)}</p>
       </div>
       <div style={{ flex: 1, display: "flex", height: "100vh" }}>
-        <div style={{ flex: 1 }}>
-          <Canvas camera={{ fov: 45, position: [0, 0, 5] }}>
+        <div style={{ flex: 1, border: "2px solid black" }}>
+          <Canvas camera={{ fov: 10, position: [0, 0, 5] }}>
             <ambientLight intensity={0.5} />
             <pointLight position={[10, 10, 10]} />
             <RotatingModel eulerAngles={eulerAngles} />
           </Canvas>
         </div>
-        <div style={{ flex: 1 }}>
-          <Canvas camera={{ fov: 60, position: [0, 0, 5] }}>
+        <div style={{ flex: 1, border: "2px solid black" }}>
+          {/* <Canvas camera={{ fov: 60, position: [0, 0, 5] }}>
             <ambientLight intensity={0.5} />
             <pointLight position={[10, 10, 10]} />
             <PositionPlot
@@ -68,7 +69,8 @@ export default function App() {
               longitude={gpsData.longitude}
               altitude={height}
             />
-          </Canvas>
+          </Canvas> */}
+          <HeightTimePlot height={height}/>
         </div>
       </div>
     </div>

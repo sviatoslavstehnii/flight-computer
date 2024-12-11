@@ -2,13 +2,16 @@ const WebSocket = require('ws');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 
-// Setup WebSocket server
-const wss = new WebSocket.Server({ port: 8080 });
-console.log('WebSocket server is running on ws://localhost:8080');
 
-// Setup Serial connection
+const COM_PORT = 'COM5';
+const WS_PORT = 8080;
+
+
+const wss = new WebSocket.Server({ port: WS_PORT });
+console.log('WebSocket server is running on ws://localhost:' + WS_PORT);
+
 const port = new SerialPort({
-  path: 'COM5', // Replace with your Teensy's port
+  path: PORT_PATH,
   baudRate: 115200,
 });
 const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
@@ -19,7 +22,6 @@ let fst_message_received = false;
 let fst_message = null;
 
 
-// Parse the serial data into roll, pitch, yaw in radians
 function parseSerialData(line) {
   const data = JSON.parse(line);
   return {
@@ -32,7 +34,6 @@ function parseSerialData(line) {
   };
 }
 
-// Listen to Serial data
 parser.on('data', (line) => {
 
   try {
@@ -56,7 +57,6 @@ parser.on('data', (line) => {
 
     console.log('Parsed data:', data);
 
-    // Broadcast data to all WebSocket clients
     wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify(data));
@@ -67,13 +67,11 @@ parser.on('data', (line) => {
   }
 });
 
-// WebSocket connection handling
 wss.on('connection', (ws) => {
   console.log('Client connected');
   ws.on('close', () => console.log('Client disconnected'));
 });
 
-// Function to generate random GPS coordinates and alt
 function getRandomInRange(min, max, decimals) {
   const num = Math.random() * (max - min) + min;
   return parseFloat(num.toFixed(decimals));

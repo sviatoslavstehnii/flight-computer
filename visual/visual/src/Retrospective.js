@@ -4,6 +4,11 @@ import { Canvas } from "@react-three/fiber";
 import RotatingModel from "./RotatingModel";
 import PositionPlot from "./PositionPlot";
 import "./App.css";
+import HeightTimePlot from "./HeightTimePlot";
+
+
+var PLOTBREAKTIME = 5000;
+
 
 export default function Retrospective() {
   const [eulerAngles, setEulerAngles] = useState({ x: 0, y: 0, z: 0 });
@@ -88,7 +93,7 @@ export default function Retrospective() {
       } else {
         clearInterval(intervalId);
       }
-    }, 500);
+    }, 200);
 
     return () => clearInterval(intervalId);
   }, [imu1Data]);
@@ -110,25 +115,28 @@ export default function Retrospective() {
         <p className="data">z: {eulerAngles.z.toFixed(2)}</p>
       </div>
       <div style={{ flex: 1, display: "flex", height: "100vh" }}>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, border: "2px solid black" }}>
           <Canvas camera={{ fov: 45, position: [0, 0, 5] }}>
             <ambientLight intensity={0.5} />
             <pointLight position={[10, 10, 10]} />
             <RotatingModel eulerAngles={eulerAngles} />
           </Canvas>
         </div>
-        <div style={{ flex: 1 }}>
-          <Canvas camera={{ fov: 60, position: [0, 0, 5] }}>
-            <ambientLight intensity={0.5} />
-            <pointLight position={[10, 10, 10]} />
-            <PositionPlot
-              latitude={gpsData.latitude}
-              longitude={gpsData.longitude}
-              altitude={height}
-            />
-          </Canvas>
+        <div style={{ flex: 1, border: "2px solid black" }}>
+          <HeightTimePlot height={height} breaktime={PLOTBREAKTIME} />
         </div>
       </div>
+      {/* <div>
+        <Canvas camera={{ fov: 60, position: [0, 0, 5] }}>
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} />
+          <PositionPlot
+            latitude={gpsData.latitude}
+            longitude={gpsData.longitude}
+            altitude={height}
+          />
+        </Canvas>
+      </div> */}
     </div>
   );
 }
