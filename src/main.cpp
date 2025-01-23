@@ -1,44 +1,44 @@
 #include <Arduino.h>
 #include <FCMS.h>
 
-#define BUZZER_PIN 28
+#define PYRO_ONE_PIN 23 // Bottom, next to LORA
+#define PYRO_TWO_PIN 21 // Top
+//#define PYRO_THREE_PIN 22
 
-BMP388 bmp388;
-GPS gps;
-IMU9DOF bmp;
+FCMS fcms{};
 
 void setup() {
 
   Wire.begin();
   Serial.begin(115200);
-  Serial.println("STAAART");
+  Serial.println("START");
 
-  bmp388.setup();
-  Serial.println("BMP388 setup done");
-  gps.setup();
-  Serial.println("GPS setup done");
-  bmp.setup();
-  Serial.println("BMP setup done");
+  Serial3.begin(115200);
+  // "\r\n"
+  byte bytes[128]{}; 
+  Serial3.write(bytes, 128);
+  size_t bytesLen = Serial3.readBytesUntil('\n', bytes, 128);
 
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(1000);
-  digitalWrite(BUZZER_PIN, LOW);
-  Serial.println("setup done");
 
+  pinMode(PYRO_ONE_PIN, OUTPUT);
+  pinMode(PYRO_TWO_PIN, OUTPUT);
+  Serial.println("Fire");
+  digitalWrite(PYRO_ONE_PIN, LOW);
+  digitalWrite(PYRO_TWO_PIN, LOW);
+
+
+  fcms.setup();
 }
 
 
 void loop() {
-  bmp388.update();
-  bmp.update();
+  fcms.step();
 
   std::stringstream ss;
-  ss << "{";
+  // ss << "{";
   ss << std::fixed << std::setprecision(2);
-  ss << "\"roll\":" << bmp.getRollRate() << ",\"pitch\":" << bmp.getPitchRate() << ",\"yaw\":" << bmp.getYawRate();
-  ss << ",\"alt\":"<< bmp388.getAltitude() << ",\"lat\":" << gps.getLatitude() << ",\"lon\":" << gps.getLongitude();
-  ss << "}";
+  // ss << "}";
   Serial.println(ss.str().c_str());
-  delay(50);
+  
+  delay(50); 
 }

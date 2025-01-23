@@ -119,5 +119,5 @@ class FCMS {
     void commitFlash();
     void commitSDMC();
 
-    
+    void buzzMillis(uint32_t ms);
 };

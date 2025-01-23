@@ -536,3 +536,15 @@ void FCMS::updateState() {
     break;
   }
 }
+
+
+void FCMS::buzzMillis(uint32_t ms){
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(ms);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
+
+// void FCMS::firePyroONE(){
+
+// }
