@@ -23,7 +23,7 @@ void BMP180::setup()
 {
   if (!bmp_.begin()) {
     Serial.println("Could not find a valid BMP180 sensor, check wiring!");
-    while (1) {}
+    // while (1) {}
   }
 
   calibrate();

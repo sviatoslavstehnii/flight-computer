@@ -7,13 +7,13 @@ void IMU9DOF::setup()
   if(!bno_.begin())
   {
     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while(1);
+    // while(1);
   }
   bno_.setExtCrystalUse(true);
   bno_.setMode(OPERATION_MODE_NDOF);
 
 
-  //calibrate();
+  // calibrate();
 
 }
 
@@ -80,12 +80,10 @@ float IMU9DOF::getAccelX() {
 void IMU9DOF::calibrate()
 {
   Serial.println("Calibrating IMU9DOF...");
-while (true) {
-
+  int time = millis();
+  while (millis() - time < 50000) {
     uint8_t system, gyro, accel, mag;
     bno_.getCalibration(&system, &gyro, &accel, &mag);
-
-
     Serial.print("Calibration: SYS=");
     Serial.print(system);
     Serial.print(", GYRO=");
@@ -94,15 +92,11 @@ while (true) {
     Serial.print(accel);
     Serial.print(", MAG=");
     Serial.println(mag);
-
     if (system == 3 && accel >= 3 && gyro >= 1 && mag == 3) {
       break;
     }
-
     delay(500);
   }
-
-
 }
 
 

@@ -1,96 +1,129 @@
-#include "GPS.h"
+#include "gps.h"
 
-GPS::GPS(HardwareSerial *serial, bool gpsEcho)
-  : gps_(&Serial1), gpsEcho_(gpsEcho), timer_(millis()) {}
+GPS::GPS(HardwareSerial &serial, bool gpsEcho)
+    : gps_(&serial), gpsSerial_(serial), gpsEcho_(gpsEcho), timer_(millis()) {}
 
-void GPS::setup() {
-  gps_.begin(9600);
-  gps_.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-  gps_.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
-  gps_.sendCommand(PGCMD_ANTENNA);
-  // Ask for firmware version
-  Serial1.println(PMTK_Q_RELEASE);
+
+
+void GPS::setup()
+{
+  gpsSerial_.begin(9600);
+  Serial.println("GPS setup");
+
+  changeFrequency();
+  delay(100);
+  changeBaudrate();
+  delay(100);
+
+  gpsSerial_.end();
+  gpsSerial_.begin(115200);
+  gps_.begin(115200);
+
+  unsigned long start = millis();
+  while ((abs(lat) <= EPSYLON || abs(lon) <= EPSYLON) && (millis() - start < GPS_SETUP_TIMEOUT))
+  {
+    update();
+  }
+  if (abs(lat) <= EPSYLON && abs(lon) <= EPSYLON)
+    Serial.println("Could not configure GPS");
+  else
+    Serial.println("GPS setup successful");
 }
 
-bool GPS::readAndParse() {
-  char c = gps_.read();
-  if (gpsEcho_ && c) Serial.print(c);
 
+void GPS::update()
+{
+  unsigned long start = millis();
+  while (millis() - start < GET_COORDS_TIMEOUT)
+  {
+    if (readAndParse())
+    {
+      lat = gps_.latitude / 100.0;
+      lon = gps_.longitude / 100.0;
+      return;
+    }
+  }
+}
+
+bool GPS::readLatLon(float &lat_, float &lon_)
+{
+  char c = gps_.read();
   if (gps_.newNMEAreceived()) {
+    if (!gps_.parse(gps_.lastNMEA())) 
+      return false;
+    else {
+      lat_ = gps_.latitude / 100.0;
+      lon_ = gps_.longitude / 100.0;
+      return true;
+    }
+  }
+}
+
+bool GPS::readAndParse()
+{
+  char c = gps_.read();
+  if (gpsEcho_ && c)
+    Serial.print(c);
+
+  if (gps_.newNMEAreceived()){
     return gps_.parse(gps_.lastNMEA());
   }
 
   return false;
 }
 
-void GPS::printStats() {
-  // if (millis() - timer_ > 2000) {
-    timer_ = millis();
-
-    Serial.print("\nTime: ");
-    printTime();
-
-    Serial.print("Date: ");
-    printDate();
-
-    Serial.print("Fix: ");
-    Serial.print((int)gps_.fix);
-    Serial.print(" quality: ");
-    Serial.println((int)gps_.fixquality);
-
-    if (gps_.fix) {
-        printLocation();
-        printOtherStats();
-    }
-  // }
+void GPS::printStats(){
+  Serial.print("Lat: "); Serial.print(gps_.latitude, 4); Serial.print(" ");
+  Serial.print("Lon: "); Serial.print(gps_.longitude, 4); Serial.print(" ");
+  Serial.print("Alt: "); Serial.print(gps_.altitude, 4); Serial.print(" ");
+  Serial.print("Speed: "); Serial.print(gps_.speed, 4); Serial.println();
 }
-
-void GPS::printTime() {
-  if (gps_.hour < 10) Serial.print('0');
-  Serial.print(gps_.hour, DEC); Serial.print(':');
-  if (gps_.minute < 10) Serial.print('0');
-  Serial.print(gps_.minute, DEC); Serial.print(':');
-  if (gps_.seconds < 10) Serial.print('0');
-  Serial.print(gps_.seconds, DEC); Serial.print('.');
-  if (gps_.milliseconds < 10) Serial.print("00");
-  else if (gps_.milliseconds < 100) Serial.print('0');
-  Serial.println(gps_.milliseconds);
-}
-
-void GPS::printDate() {
-  Serial.print(gps_.day, DEC); Serial.print('/');
-  Serial.print(gps_.month, DEC); Serial.print("/20");
-  Serial.println(gps_.year, DEC);
-}
-
-void GPS::printLocation() {
-  Serial.print("Location: ");
-  Serial.print(gps_.latitude, 4); Serial.print(gps_.lat);
-  Serial.print(", ");
-  Serial.print(gps_.longitude, 4); Serial.println(gps_.lon);
-}
-
-void GPS::printOtherStats() {
-  Serial.print("Speed (knots): "); Serial.println(gps_.speed);
-  Serial.print("Angle: "); Serial.println(gps_.angle);
-  Serial.print("Altitude: "); Serial.println(gps_.altitude);
-  Serial.print("Satellites: "); Serial.println((int)gps_.satellites);
-  Serial.print("Antenna status: "); Serial.println((int)gps_.antenna);
-}
-
-
 
 nmea_float_t GPS::getLongitude()
 {
-  return gps_.fix ? gps_.longitude : 0.0f;
+  return gps_.longitude / 100;
 }
 
 nmea_float_t GPS::getLatitude()
 {
-  return gps_.fix ? gps_.latitude : 0.0f;
+  return gps_.latitude / 100;
 }
 
 nmea_float_t GPS::getAltitude()
 {
-  return gps_.fix ? gps_.altitude : 0.0f;
+  return gps_.altitude;
+}
+
+
+void GPS::sendPacket(byte *packet, byte len)
+{
+  for (byte i = 0; i < len; i++)
+  {
+    gpsSerial_.write(packet[i]);
+  }
+}
+
+void GPS::changeBaudrate()
+{
+  byte packet115200[] = {
+      0xB5, 0x62, 0x06, 0x00,
+      0x14, 0x00, 0x01, 0x00,
+      0x00, 0x00, 0xD0, 0x08,
+      0x00, 0x00, 0x00, 0xC2,
+      0x01, 0x00, 0x07, 0x00,
+      0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0xC0, 0x7E,
+  };
+  sendPacket(packet115200, sizeof(packet115200));
+}
+
+void GPS::changeFrequency()
+{
+  byte packet[] = {
+      0xB5, 0x62, 0x06, 0x08,
+      0x06, 0x00, 0xC8, 0x00,
+      0x01, 0x00, 0x01, 0x00,
+      0xDE, 0x6A,
+  };
+  sendPacket(packet, sizeof(packet));
 }

@@ -5,14 +5,12 @@ void FCMS::setup()
 {
   Serial.println("Set up FCMS");
   Wire.begin();
-  sdmc_.setup();
-
   gps_.setup();
   baro388_.setup();
   baro_.setup();
   imu_.setup();
-  imu9dof_.setup();  
-  delay(20000);
+  imu9dof_.setup();
+  sdmc_.setup();
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
@@ -20,7 +18,7 @@ void FCMS::setup()
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
-    delay(140);
+  delay(140);
 
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
@@ -29,9 +27,7 @@ void FCMS::setup()
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
-  // set capacity and erase chip
   flash_.setup(16777216, true);
-  // write first bytes for consistency
   char setup_data[] = "setup";
   if (!flash_.writeToDJ(setup_data, sizeof(setup_data)) ) {
     Serial.println("ERROR: failed to write setup data to flash chip");
@@ -41,26 +37,23 @@ void FCMS::setup()
 
 void FCMS::checkHealth()
 {
-
+  int time = millis();
   Serial.println("Check health of gps...");
-  while (true) {
-    if (gps_.readAndParse()) {
-      gps_.printStats();
-      auto val = gps_.getLatitude();
-      if (val != 0.0f) {
-        Serial.println("Healthy");
-        break;
-      }
+  while (millis() - time < HEALTH_CHECK_TIMEOUT) {
+    gps_.update();
+    if (gps_.lat > 0.0 && gps_.lon > 0.0) {
+      Serial.println("GPS Healthy");
     }
   }
 
   Serial.println("Check health of imu...");
+  time = millis();
   float prev_val = 0;
-  while (true) {
+  while (millis() - time < HEALTH_CHECK_TIMEOUT) {
     imu_.update();
     float new_val = imu_.getAccelX();
-    if (new_val != prev_val && prev_val != 0) {
-      Serial.println("Healthy");
+    if (new_val != prev_val && abs(prev_val) > EPSYLON) {
+      Serial.println("IMU Healthy");
       break;
     }
     prev_val = new_val;
@@ -68,12 +61,13 @@ void FCMS::checkHealth()
   }
 
   Serial.println("Check health of imu9dof...");
+  time = millis();
   prev_val = 0;
-  while (true) {
+  while (millis() - time < HEALTH_CHECK_TIMEOUT) {
     imu9dof_.update();
     float new_val = imu9dof_.getAccelX();
-    if (new_val != prev_val && prev_val != 0) {
-      Serial.println("Healthy");
+    if (new_val != prev_val && abs(prev_val) > EPSYLON) {
+      Serial.println("IMU9DOF Healthy");
       break;
     }
     prev_val = new_val;
@@ -81,12 +75,13 @@ void FCMS::checkHealth()
   }
 
   Serial.println("Check health of barometer388...");
+  time = millis();
   prev_val = 0;
-  while (true) {
+  while (millis() - time < HEALTH_CHECK_TIMEOUT) {
     baro388_.update();
     float new_val = baro388_.getAltitude();
-    if (new_val != prev_val && prev_val != 0) {
-      Serial.println("Healthy");
+    if (new_val != prev_val && abs(prev_val) > EPSYLON) {
+      Serial.println("BMP388 Healthy");
       break;
     }
     prev_val = new_val;
@@ -94,20 +89,18 @@ void FCMS::checkHealth()
   }
 
   Serial.println("Check health of barometer280...");
+  time = millis();
   prev_val = 0;
-  while (true) {
+  while (millis() - time < HEALTH_CHECK_TIMEOUT) {
     baro_.update();
     float new_val = baro_.getAltitude();
-    if (new_val != prev_val && prev_val != 0) {
-      Serial.println("Healthy");
+    if (new_val != prev_val && abs(prev_val) > EPSYLON) {
+      Serial.println("BMP280 Healthy");
       break;
     }
     prev_val = new_val;
     delay(10);
   }
-
-  
-
   Serial.println("Sensors are ready to work!");
 }
 
@@ -172,8 +165,6 @@ void FCMS::estimateAttitude()
 
 void FCMS::estimateAltitude()
 {
-
-
   baro_.update();
   sensor_data_.alt1 = baro_.getAltitude();
 
@@ -184,11 +175,9 @@ void FCMS::estimateAltitude()
 
 void FCMS::estimateGPS()
 {
-  if (gps_.readAndParse()){
-    Serial.println("GPS data:");
-    sensor_data_.lat = gps_.getLatitude();
-    sensor_data_.lon = gps_.getLongitude();
-  }
+  gps_.update();
+  sensor_data_.lat = gps_.lat;
+  sensor_data_.lon = gps_.lon;
 }
 
 void FCMS::commitFlash()
@@ -251,7 +240,8 @@ void FCMS::commitSDMC()
 {
   sdmc_.remove("dj.txt");
   size_t bytes_read = 0;
-  while (true) {
+  int time = millis();
+  while (millis() - time < COMMIT_TIMEOUT) {
     char read_data[1000] = "";
     flash_.readDJ(read_data, 1000, bytes_read);
     if ( strlen(read_data) == 0 ) {
@@ -267,7 +257,8 @@ void FCMS::commitSDMC()
 
   sdmc_.remove("mej.txt");
   bytes_read = 0;
-  while (true) {
+  time = millis();
+  while (millis() - time < COMMIT_TIMEOUT) {
     char read_data[1000] = "";
     flash_.readMEJ(read_data, 1000, bytes_read);
     if ( strlen(read_data) == 0 ) {

@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <FCMS.h>
 
 #define PYRO_ONE_PIN 23 // Bottom, next to LORA
@@ -8,8 +7,6 @@
 FCMS fcms{};
 
 void setup() {
-
-  Wire.begin();
   Serial.begin(115200);
   Serial.println("START");
 
@@ -33,12 +30,4 @@ void setup() {
 
 void loop() {
   fcms.step();
-
-  std::stringstream ss;
-  // ss << "{";
-  ss << std::fixed << std::setprecision(2);
-  // ss << "}";
-  Serial.println(ss.str().c_str());
-  
-  delay(50); 
 }

@@ -6,7 +6,7 @@ void BMP280::setup()
   if (!bmp_.begin(0x76)) {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring or "
                 "try a different address!"));
-    while (1) delay(10);
+    // while (1) delay(10);
   }
 
   /* Default settings from datasheet. */

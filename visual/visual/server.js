@@ -11,7 +11,7 @@ const wss = new WebSocket.Server({ port: WS_PORT });
 console.log('WebSocket server is running on ws://localhost:' + WS_PORT);
 
 const port = new SerialPort({
-  path: PORT_PATH,
+  path: COM_PORT,
   baudRate: 115200,
 });
 const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }));
