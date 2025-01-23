@@ -1,4 +1,4 @@
-#include "LORA.h"
+#include "lora.h"
 
 LORA::LORA(uint8_t csPin, uint8_t resetPin, uint8_t dio0Pin)
     : _csPin(csPin), _resetPin(resetPin), _dio0Pin(dio0Pin) {}

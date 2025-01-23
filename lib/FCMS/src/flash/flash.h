@@ -2,6 +2,8 @@
 #include <SPIFlash.h>
 #include <Wire.h>
 
+#define FLASH_READ_TIMEOUT 5000
+
 class Flash {
   private:
     SPIFlash flash_;
@@ -27,7 +29,7 @@ class Flash {
     bool readFromPartition(char *buf, size_t len, size_t start);
     
   public:
-    Flash(size_t chipSelect): flash_(chipSelect) {};
+    Flash(size_t chipSelect=10): flash_(chipSelect) {};
     ~Flash() = default;
 
     Flash(const Flash&) = delete;

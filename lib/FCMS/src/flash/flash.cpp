@@ -94,8 +94,9 @@ bool Flash::readFromPartition(char *buf, size_t len, size_t start)
 
   size_t offset = 0;
   size_t chunk_sz = 100;
+  int time = millis();
 
-  while (true) {
+  while (millis() - time < FLASH_READ_TIMEOUT) {
     char temp_buf[chunk_sz];
     read(start + offset, temp_buf, chunk_sz);
     size_t temp_sz = strlen(temp_buf);

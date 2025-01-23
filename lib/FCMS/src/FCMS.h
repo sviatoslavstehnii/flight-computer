@@ -17,8 +17,10 @@
 #include <iostream>
 #include <queue>
 
-
+#define EPSYLON 0.0001
 #define BUZZER_PIN 28
+#define HEALTH_CHECK_TIMEOUT 10000
+#define COMMIT_TIMEOUT 5000
 
 // FCMS lib
 // Flight Computer Managment System 
