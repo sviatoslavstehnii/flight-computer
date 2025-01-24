@@ -1,16 +1,18 @@
 #include "FCMS.h"
 
+#define GROUND_STATION_ADDR 0xCC
 
 void FCMS::setup()
 {
   Serial.println("Set up FCMS");
   Wire.begin();
-  gps_.setup();
+  transceiver.setup();
+  sdmc_.setup();
   baro388_.setup();
   baro_.setup();
   imu_.setup();
   imu9dof_.setup();
-  sdmc_.setup();
+  gps_.setup();
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
@@ -121,21 +123,9 @@ void FCMS::estimateAttitude()
   float rollRate, angleRoll, pitchRate, anglePitch = 0.0f;
   //first imu
   imu9dof_.update();
-  // rollRate = imu9dof_.getRollRate();
-  // angleRoll = imu9dof_.getAngleRoll();
-
-  // pitchRate = imu9dof_.getPitchRate();
-  // anglePitch = imu9dof_.getAnglePitch();
-
-  // kf9dof_.updateRoll(rollRate, angleRoll);
-  // kf9dof_.updatePitch(pitchRate, anglePitch);
-  // sensor_data_.pitch1 = kf9dof_.getAnglePitch();
-  // sensor_data_.roll1 = kf9dof_.getAngleRoll();
-  // sensor_data_.yaw1 = imu9dof_.getYawRate();
-
-  sensor_data_.pitch1 = imu9dof_.getPitchRate();
-  sensor_data_.roll1 = imu9dof_.getRollRate();
-  sensor_data_.yaw1 = imu9dof_.getYawRate();
+  sensor_data_.pitchRate1 = imu9dof_.getPitchRate();
+  sensor_data_.rollRate1 = imu9dof_.getRollRate();
+  sensor_data_.yawRate1 = imu9dof_.getYawRate();
   
   // second imu
   imu_.update();
@@ -184,9 +174,9 @@ void FCMS::commitFlash()
 {
 
   std::ostringstream data_msg;
-  data_msg << "Pitch:" << std::fixed << std::setprecision(2) << sensor_data_.pitch1 <<
-   ",Roll: " << std::fixed << std::setprecision(2) << sensor_data_.roll1 
-  << ",Yaw: " << std::fixed << std::setprecision(2) << sensor_data_.yaw1
+  data_msg << "Pitch:" << std::fixed << std::setprecision(2) << sensor_data_.pitchRate1 <<
+   ",Roll: " << std::fixed << std::setprecision(2) << sensor_data_.rollRate1 
+  << ",Yaw: " << std::fixed << std::setprecision(2) << sensor_data_.yawRate1
   << ",Alt:" << std::fixed << std::setprecision(2) << sensor_data_.alt1
   << ",Lat:" << std::fixed << std::setprecision(2) << sensor_data_.lat
   << ",Lon:" << std::fixed << std::setprecision(2) << sensor_data_.lon << ";"<< getState();
@@ -279,22 +269,23 @@ void FCMS::step()
 {
   STATE state = getState();
 
+  size_t time_now_ms = millis();
 
   if (state != SAFE && state != LANDED) {
     estimateAttitude();
-    if(millis() - estimateAltitudeMillis >= estimateAltitudeInterval) {
-      estimateAltitudeMillis = millis();
+    if(time_now_ms - estimateAltitudeMillis >= estimateAltitudeInterval) {
+      estimateAltitudeMillis = time_now_ms;
       estimateAltitude();
     }
-    if ((millis() - commitMillis >= commitInterval) && dataLogingStarted) {
-      commitMillis = millis();
+    if ((time_now_ms - commitMillis >= commitInterval) && dataLogingStarted) {
+      commitMillis = time_now_ms;
       commitFlash();
       Serial.print("{\"roll\":");
-      Serial.print(sensor_data_.roll1, 2);
+      Serial.print(sensor_data_.rollRate1, 2);
       Serial.print(",\"pitch\":");
-      Serial.print(sensor_data_.pitch1, 2);
+      Serial.print(sensor_data_.pitchRate1, 2);
       Serial.print(",\"yaw\":");
-      Serial.print(sensor_data_.yaw1, 2);
+      Serial.print(sensor_data_.yawRate1, 2);
       Serial.print(",\"lat\":");
       Serial.print(sensor_data_.lat, 6);
       Serial.print(",\"lon\":");
@@ -306,13 +297,13 @@ void FCMS::step()
       Serial.println("}");
     }
 
-    if (millis() - estimateGPSMillis >= estimateGPSInterval) {
-      estimateGPSMillis = millis();
+    if (time_now_ms - estimateGPSMillis >= estimateGPSInterval) {
+      estimateGPSMillis = time_now_ms;
       estimateGPS();
     }
 
-    // if (millis() - buzzerMillis >= 1500) {
-    //   buzzerMillis = millis();
+    // if (time_now_ms - buzzerMillis >= 1500) {
+    //   buzzerMillis = time_now_ms;
     //   digitalWrite(BUZZER_PIN, LOW);
     // } 
   }
@@ -536,6 +527,66 @@ void FCMS::buzzMillis(uint32_t ms){
 }
 
 
-// void FCMS::firePyroONE(){
+void FCMS::sendTelemetry(){
+  Telemetry telemetry{};
 
-// }
+    telemetry.flightState = static_cast<uint8_t>(curr_state_); // conversion?
+    telemetry.barometricAlt = static_cast<int16_t>(sensor_data_.alt2);
+    telemetry.imuData.accel_x = static_cast<int16_t>(imu_.getAccelX());
+    telemetry.imuData.accel_y = static_cast<int16_t>(imu_.getAccelY());
+    telemetry.imuData.accel_z = static_cast<int16_t>(imu_.getAccelZ());
+    telemetry.imuData.velocity_x = static_cast<int16_t>(imu_.getVelX());
+    telemetry.imuData.velocity_y = static_cast<int16_t>(imu_.getVelY());
+    telemetry.imuData.velocity_z = static_cast<int16_t>(imu_.getVelZ());
+    telemetry.imuData.position_x = static_cast<int16_t>(imu_.getPosX());
+    telemetry.imuData.position_y = static_cast<int16_t>(imu_.getPosY());
+    telemetry.imuData.position_z = static_cast<int16_t>(imu_.getPosZ());
+    telemetry.imuData.roll = static_cast<uint16_t>(kf_.getAngleRoll());
+    telemetry.imuData.pitch = static_cast<uint16_t>(kf_.getAnglePitch());
+    telemetry.imuData.yaw = static_cast<uint16_t>(kf_.getAngleYaw());
+
+    telemetry.fin1 = static_cast<uint8_t>(fins.fin1);
+    telemetry.fin2 = static_cast<uint8_t>(fins.fin2);
+    telemetry.fin3 = static_cast<uint8_t>(fins.fin3);
+    telemetry.fin4 = static_cast<uint8_t>(fins.fin4);
+
+    telemetry.mVBat = 0;
+    telemetry.mABat = 0;
+    telemetry.loadCell = 0;
+    telemetry.temp = imu9dof_.getTemp();
+
+    /// TODO
+    telemetry.mejPercent = 0;
+    telemetry.cjPercent = 0;
+    telemetry.datajournalPercent = 0;
+
+    // GPS Lat, Lon (multiplied by 1,000,000 for 6-digit precision)
+    telemetry.gpsLat = static_cast<int32_t>(sensor_data_.lat * 1000000);  
+    telemetry.gpsLon = static_cast<int32_t>(sensor_data_.lon * 1000000);  
+    telemetry.gpsAlt = static_cast<int16_t>(gps_.getAltitude());
+    
+    /// TODO
+    telemetry.takeOffDetection = 0;
+    telemetry.apogeeDetection = 0;
+    telemetry.landingDetection = 0;
+
+    telemetry.apogee = static_cast<int16_t>(baro_.getMaxApogee());
+    
+    telemetry.pyroFlags.pyro1_cont = 1;
+    telemetry.pyroFlags.pyro1_safe = 1;
+    telemetry.pyroFlags.pyro1_fire = 0;
+    telemetry.pyroFlags.pyro2_cont = 1;
+    telemetry.pyroFlags.pyro2_safe = 1;
+    telemetry.pyroFlags.pyro2_fire = 0;
+    telemetry.pyroFlags.pyro3_cont = 0;
+    telemetry.pyroFlags.pyro3_safe = 1;
+    telemetry.pyroFlags.pyro3_fire = 0;
+
+  // packet.sender = transceiver..getMyAddress();
+  // packet.receiver = GROUND_STATION_ADDR;
+  // packet.seq_id = sequence_id++;
+  // packet.timestamp=millis();
+  // packet.telemetry=telemetry;
+
+  //transceiver.sendTelemetry(telemetry);
+}

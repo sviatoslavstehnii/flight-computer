@@ -97,10 +97,22 @@ float IMU::getAnglePitch()
   return anglePitch_;
 }
 
-float IMU::getAccelX() {
-    return accX_cal_;
+float IMU::getAngleYaw() /// TODO: Get yaw
+{
+  return angleYaw_;
 }
 
+float IMU::getAccelX() {
+  return accX_cal_;
+}
+
+float IMU::getAccelY() {
+  return accY_cal_;
+}
+
+float IMU::getAccelZ() {
+  return accZ_cal_;
+}
 
 void IMU::calibrate()
 {
@@ -158,15 +170,11 @@ void IMU::updateAccel()
   Wire.write(0x3B);
   Wire.endTransmission();
 
-
   Wire.requestFrom(0x68, 6);
-
 
   int16_t AccXLBS = Wire.read() << 8 | Wire.read();
   int16_t AccYLBS = Wire.read() << 8 | Wire.read();
   int16_t AccZLBS = Wire.read() << 8 | Wire.read();
-
-
 
   accX_ = static_cast<float>(AccXLBS) / 4096.0 - accXCalibration_;
   accY_ = static_cast<float>(AccYLBS) / 4096.0 - accYCalibration_;
@@ -179,7 +187,49 @@ void IMU::updateAccel()
   anglePitch_ = 180 * atan2(accX_cal_, sqrt(accY_cal_*accY_cal_ + accZ_cal_*accZ_cal_))/PI;
   angleRoll_ = 180 * atan2(accY_cal_, sqrt(accX_cal_*accX_cal_ + accZ_cal_*accZ_cal_))/PI;
 
+  // Integrate acceleration to get velocity
+  unsigned long currentTime = millis();
+  // Delta time in seconds
+  float deltaTime = (currentTime - lastTime_) / 1000.0; 
+
+  if (deltaTime > 0) {
+    velX_ += accX_cal_ * deltaTime;
+    velY_ += accY_cal_ * deltaTime;
+    velZ_ += accZ_cal_ * deltaTime;
+
+    // integrate velocity to get position
+    posX_ += velX_ * deltaTime;
+    posY_ += velY_ * deltaTime;
+    posZ_ += velZ_ * deltaTime;
+  }
+
+  lastTime_ = currentTime;
 }
+
+float IMU::getVelX() {
+  return velX_;
+}
+
+float IMU::getVelY() {
+  return velY_;
+}
+
+float IMU::getVelZ() {
+  return velZ_;
+}
+
+float IMU::getPosX() {
+  return posX_;
+}
+
+float IMU::getPosY() {
+  return posY_;
+}
+
+float IMU::getPosZ() {
+  return posZ_;
+}
+
 
 void IMU::updateGyro()
 {
@@ -233,4 +283,5 @@ void IMU::detectLanding() {
     landingDetected = true;
   }
 }
+
 

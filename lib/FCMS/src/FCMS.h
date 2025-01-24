@@ -10,12 +10,15 @@
 #include "gps/gps.h"
 #include "sdmc/sdmc.h"
 #include "ina/ina.h"
-#include "lora/lora.h"
+#include "lora/transceiver.h"
 
 #include <sstream>
 #include <iomanip>
 #include <iostream>
 #include <queue>
+
+#define VEHICLE_ADDR 0xEE
+#define GROUND_ADDR 0xCC
 
 #define EPSYLON 0.0001
 #define BUZZER_PIN 28
@@ -47,27 +50,33 @@ enum CURRENT_MODE {
 
 class FCMS {
   private:
-    IMU imu_;
-    IMU9DOF imu9dof_;
+    IMU imu_{};
+    IMU9DOF imu9dof_{};
     KalmanFilter kf_;
     KalmanFilter kf9dof_;
-    BMP280 baro_;
-    BMP388 baro388_;
+    BMP280 baro_{};
+    BMP388 baro388_{};
     Flash flash_;
-    SDMC sdmc_;
-    GPS gps_;
+    SDMC sdmc_{};
+    GPS gps_{};
+    FlightTransceiver transceiver{VEHICLE_ADDR, GROUND_ADDR};
+    
 
     int land = 0;
 
     STATE curr_state_;
 
     struct SensorData{
-      float pitch1, roll1, yaw1 = 0;
-      float pitch2, roll2, yaw2 = 0;
-      float alt1, alt2 = 0;
-      float lon, lat = 0;
+      float pitchRate1, rollRate1, yawRate1;
+      float pitch2, roll2, yaw2;
+      float alt1, alt2;
+      float lon, lat;
     } sensor_data_;
     float altitude_ = 0;
+
+    struct Fins{
+      int fin1, fin2, fin3, fin4;
+    } fins;
 
 
     uint32_t estimateAltitudeMillis = 0;
@@ -83,8 +92,7 @@ class FCMS {
     uint32_t monitorInterval = 400;
 
     uint32_t buzzerMillis = 0;
-
-
+    uint32_t sequence_id = 0;
     
 
     bool firstlaunch = true;
@@ -122,4 +130,6 @@ class FCMS {
     void commitSDMC();
 
     void buzzMillis(uint32_t ms);
+
+    void sendTelemetry();
 };

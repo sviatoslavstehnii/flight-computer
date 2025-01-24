@@ -104,6 +104,7 @@ void IMU9DOF::update()
 {
   updateAccel();
   updateGyro();
+  updateTemp();
   if (!takeoffDetected) {
     detectTakeoff();
   }
@@ -167,5 +168,13 @@ void IMU9DOF::detectLanding() {
   if (successCount >= requiredChecks) {
     landingDetected = true;
   }
+}
+
+void IMU9DOF::updateTemp(){
+  temp_ = bno_.getTemp();
+}
+
+int8_t IMU9DOF::getTemp(){
+  return temp_;
 }
 

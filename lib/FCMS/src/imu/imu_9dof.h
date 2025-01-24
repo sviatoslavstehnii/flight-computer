@@ -19,6 +19,8 @@ class IMU9DOF {
     float anglePitch_ = 0;
     float angleYaw_ = 0;
 
+    int8_t temp_ = 0;
+
     
     void calibrate();
 
@@ -48,6 +50,7 @@ class IMU9DOF {
     void update();
     void updateAccel();
     void updateGyro();
+    void updateTemp();
 
     void printGyroData();
     void printAccelData();
@@ -58,6 +61,8 @@ class IMU9DOF {
 
     float getAngleRoll();
     float getAnglePitch();
+
+    int8_t getTemp();
 
     float getAccelX();
 
