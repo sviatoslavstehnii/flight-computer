@@ -271,11 +271,16 @@ void FCMS::step()
 
   size_t time_now_ms = millis();
 
-  if (state != SAFE && state != LANDED) {
+  // if (state != SAFE && state != LANDED) {
     estimateAttitude();
     if(time_now_ms - estimateAltitudeMillis >= estimateAltitudeInterval) {
       estimateAltitudeMillis = time_now_ms;
       estimateAltitude();
+    }
+    if (time_now_ms - commsMillis >= commsInterval){
+      transceiver.receivePacket();
+      Telemetry& tel = mapTelemetry();
+      transceiver.sendPacket(tel);
     }
     if ((time_now_ms - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = time_now_ms;
@@ -306,7 +311,7 @@ void FCMS::step()
     //   buzzerMillis = time_now_ms;
     //   digitalWrite(BUZZER_PIN, LOW);
     // } 
-  }
+  // }
   updateState();
 
 }
@@ -527,8 +532,8 @@ void FCMS::buzzMillis(uint32_t ms){
 }
 
 
-void FCMS::sendTelemetry(){
-  Telemetry telemetry{};
+Telemetry& FCMS::mapTelemetry(){
+  Telemetry telemetry;
 
     telemetry.flightState = static_cast<uint8_t>(curr_state_); // conversion?
     telemetry.barometricAlt = static_cast<int16_t>(sensor_data_.alt2);
@@ -582,11 +587,5 @@ void FCMS::sendTelemetry(){
     telemetry.pyroFlags.pyro3_safe = 1;
     telemetry.pyroFlags.pyro3_fire = 0;
 
-  // packet.sender = transceiver..getMyAddress();
-  // packet.receiver = GROUND_STATION_ADDR;
-  // packet.seq_id = sequence_id++;
-  // packet.timestamp=millis();
-  // packet.telemetry=telemetry;
-
-  //transceiver.sendTelemetry(telemetry);
+  return telemetry;
 }

@@ -88,6 +88,9 @@ class FCMS {
     uint32_t commitMillis = 0;
     uint32_t commitInterval = 100;
 
+    uint32_t commsMillis = 0;
+    uint32_t commsInterval = 100;
+
     uint32_t monitorMillis = 0;
     uint32_t monitorInterval = 400;
 
@@ -131,5 +134,5 @@ class FCMS {
 
     void buzzMillis(uint32_t ms);
 
-    void sendTelemetry();
+    Telemetry& mapTelemetry();
 };

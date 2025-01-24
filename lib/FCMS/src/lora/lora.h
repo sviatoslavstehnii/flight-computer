@@ -16,21 +16,22 @@ public:
     void setup();
 
     void sendCommand(uint8_t receiverAddr, COMMAND_ID command_id);
-    void sendTelemetry(TelemetryPacket &packet);
-    void sendResponse(CommandPacket& command, Response response);
+    void sendTelemetry(TelemetryPacket& packet);
+    void sendResponse(const CommandPacket& command, const Response& response);
 
-    TelemetryPacket& receiveTelemetry(uint8_t *buffer, size_t length);
-    ResponsePacket& receiveResponse(uint8_t *buffer, size_t length);
-    CommandPacket& receiveCommand(uint8_t *buffer, size_t length);
+    TelemetryPacket& receiveTelemetry(uint8_t *buffer);
+    ResponsePacket& receiveResponse(uint8_t *buffer);
+    CommandPacket& receiveCommand(uint8_t *buffer);
 
-    std::optional<PacketType> parseTraffic();
+    std::optional<PacketType> parseHeader(uint8_t *buffer, size_t length);
 
     uint32_t getMyAddress() const;
 
-
+    bool available() const;
+    size_t read(uint8_t *buffer, size_t size) const;
 private:
     uint8_t myAddr;
-    uint8_t packet_[128]{};
+    uint32_t seqID_{0};
 };
 
 #endif // LORA_H

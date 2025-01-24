@@ -2,8 +2,8 @@
 
 
 #define TELEMETRY_SIZE 85
-#define COMMAND_SIZE 21
-#define RESPONSE_SIZE 20
+#define COMMAND_SIZE 23
+#define RESPONSE_SIZE 22
 #define START_BYTE 0xAA
 
 enum PacketType{
@@ -42,12 +42,13 @@ struct ImuData {
 };
 
 enum COMMAND_ID{
-
+    PING=1
 };
 
 class CommandPacket : public BasePacket{
 public:
     COMMAND_ID command_id;
+    uint8_t args[8];
     uint8_t getPacketType() const override {
         return PACKET_COMMAND;
     }
