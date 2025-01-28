@@ -15,13 +15,13 @@ public:
 
     void setup();
 
-    void sendCommand(uint8_t receiverAddr, COMMAND_ID command_id);
+    void sendCommand(uint8_t receiverAddr, Command& command);
     void sendTelemetry(TelemetryPacket& packet);
-    void sendResponse(const CommandPacket& command, const Response& response);
+    void sendResponse(uint8_t receiver, Response& response);
 
-    TelemetryPacket& receiveTelemetry(uint8_t *buffer);
-    ResponsePacket& receiveResponse(uint8_t *buffer);
-    CommandPacket& receiveCommand(uint8_t *buffer);
+    TelemetryPacket receiveTelemetry(uint8_t *buffer);
+    ResponsePacket receiveResponse(uint8_t *buffer);
+    CommandPacket receiveCommand(uint8_t *buffer);
 
     std::optional<PacketType> parseHeader(uint8_t *buffer, size_t length);
 

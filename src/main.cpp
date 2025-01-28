@@ -1,3 +1,33 @@
+//#define GROUND_STATION
+
+#ifdef GROUND_STATION
+#include <GSMS.h>
+
+GSMS gsms{};
+
+void setup(){
+  Serial.begin(9600);
+  Serial.println("START");
+  // Serial3.begin(115200);
+  delay(100);
+  gsms.setup();
+}
+
+void loop(){
+  // print hex values of incoming data
+  while(Serial3.available()){
+    char c = Serial3.read();
+    Serial.print("0x");
+    Serial.print(c, HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+  delay(300);
+
+  gsms.step();
+}
+
+#else
 #include <FCMS.h>
 
 #define PYRO_ONE_PIN 23 // Bottom, next to LORA
@@ -7,22 +37,15 @@
 FCMS fcms{};
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println("START");
-
-  Serial3.begin(115200);
-  // "\r\n"
-  byte bytes[128]{}; 
-  Serial3.write(bytes, 128);
-  size_t bytesLen = Serial3.readBytesUntil('\n', bytes, 128);
-
+  Wire.begin();
 
   pinMode(PYRO_ONE_PIN, OUTPUT);
   pinMode(PYRO_TWO_PIN, OUTPUT);
-  Serial.println("Fire");
+  Serial.println("Pyro Off");
   digitalWrite(PYRO_ONE_PIN, LOW);
   digitalWrite(PYRO_TWO_PIN, LOW);
-
 
   fcms.setup();
 }
@@ -31,3 +54,4 @@ void setup() {
 void loop() {
   fcms.step();
 }
+#endif

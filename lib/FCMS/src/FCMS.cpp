@@ -1,9 +1,23 @@
 #include "FCMS.h"
 
 #define GROUND_STATION_ADDR 0xCC
+#define LED_RED_PIN 25
+#define LED_GREEN_PIN 26
+#define LED_BLUE_PIN 27
+
+void setColor(int r, int g, int b){
+  analogWrite(LED_RED_PIN, 255-r);
+  analogWrite(LED_GREEN_PIN, 255-g);
+  analogWrite(LED_BLUE_PIN, 255-b);
+}
 
 void FCMS::setup()
 {
+  pinMode(LED_RED_PIN, OUTPUT);
+  pinMode(LED_GREEN_PIN, OUTPUT);
+  pinMode(LED_BLUE_PIN, OUTPUT);
+  setColor(50, 0, 0);
+
   Serial.println("Set up FCMS");
   Wire.begin();
   transceiver.setup();
@@ -13,6 +27,7 @@ void FCMS::setup()
   imu_.setup();
   imu9dof_.setup();
   gps_.setup();
+  // pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
@@ -29,12 +44,13 @@ void FCMS::setup()
   digitalWrite(BUZZER_PIN, HIGH);
   delay(140);
   digitalWrite(BUZZER_PIN, LOW);
-  flash_.setup(16777216, true);
-  char setup_data[] = "setup";
-  if (!flash_.writeToDJ(setup_data, sizeof(setup_data)) ) {
-    Serial.println("ERROR: failed to write setup data to flash chip");
-  }
+  // flash_.setup(16777216, true);
+  // char setup_data[] = "setup";
+  // if (!flash_.writeToDJ(setup_data, sizeof(setup_data)) ) {
+  //   Serial.println("ERROR: failed to write setup data to flash chip");
+  // }
   curr_state_ = LAUNCH;
+  setColor(0, 50, 0);
 }
 
 void FCMS::checkHealth()
@@ -272,19 +288,30 @@ void FCMS::step()
   size_t time_now_ms = millis();
 
   // if (state != SAFE && state != LANDED) {
-    estimateAttitude();
     if(time_now_ms - estimateAltitudeMillis >= estimateAltitudeInterval) {
       estimateAltitudeMillis = time_now_ms;
       estimateAltitude();
     }
     if (time_now_ms - commsMillis >= commsInterval){
-      transceiver.receivePacket();
-      Telemetry& tel = mapTelemetry();
-      transceiver.sendPacket(tel);
+      commsMillis = time_now_ms;
+      delay(100);
+      transceiver.receive();
+      if (transceiver.hasCommand()) {
+        auto command_id = transceiver.popCommand();
+        // process command
+        Serial.println("Received command");
+        // send response
+        Response response;
+        response.commandSeqId = command_id.sequenceId;
+        
+        transceiver.sendResponse(GROUND_STATION_ADDR, response);
+      }
+      Telemetry tel = mapTelemetry();
+      transceiver.sendTelemetry(GROUND_ADDR, tel);
     }
     if ((time_now_ms - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = time_now_ms;
-      commitFlash();
+      //commitFlash();
       Serial.print("{\"roll\":");
       Serial.print(sensor_data_.rollRate1, 2);
       Serial.print(",\"pitch\":");
@@ -364,7 +391,7 @@ void FCMS::updateState() {
     break;
 
   case LAUNCH:
-    Serial.println("LAUNCH");
+    // Serial.println("LAUNCH");
     if (!dataLogingStarted) {
       Serial.println("Start writing data to flash");
       dataLogingStarted = true;
@@ -532,7 +559,7 @@ void FCMS::buzzMillis(uint32_t ms){
 }
 
 
-Telemetry& FCMS::mapTelemetry(){
+Telemetry FCMS::mapTelemetry(){
   Telemetry telemetry;
 
     telemetry.flightState = static_cast<uint8_t>(curr_state_); // conversion?

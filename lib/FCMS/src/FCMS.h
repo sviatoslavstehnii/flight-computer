@@ -59,7 +59,7 @@ class FCMS {
     Flash flash_;
     SDMC sdmc_{};
     GPS gps_{};
-    FlightTransceiver transceiver{VEHICLE_ADDR, GROUND_ADDR};
+    Transceiver transceiver{VEHICLE_ADDR};
     
 
     int land = 0;
@@ -134,5 +134,5 @@ class FCMS {
 
     void buzzMillis(uint32_t ms);
 
-    Telemetry& mapTelemetry();
+    Telemetry mapTelemetry();
 };

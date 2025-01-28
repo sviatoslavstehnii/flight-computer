@@ -5,6 +5,16 @@ void LORA::setup(){
     Serial.print("Initializing LoRa... ");
     Serial3.begin(115200);
     Serial.println("Success");
+    Serial3.println("DEB");
+
+    // int time_s = 10;
+    // size_t start_time = millis();
+    // while(millis() - start_time < time_s * 1000){
+    //     if (Serial3.available()){
+    //         char c = Serial3.read();
+    //         Serial.print(c);
+    //     }
+    // }
 }
 
 uint32_t LORA::getMyAddress() const {
@@ -18,17 +28,22 @@ bool LORA::available() const
 
 size_t LORA::read(uint8_t *buffer, size_t size) const
 {
-    return Serial3.readBytesUntil('\n', buffer, size);
+    Serial.println(Serial3.readStringUntil('\n'));
+    return 0;
+    //return Serial3.readBytesUntil('\n', buffer, size);
 }
 
-void LORA::sendResponse(const CommandPacket &command, const Response &response)
+void LORA::sendResponse(uint8_t receiver, Response& response)
 {
+    Serial.println("Sending response");
     ResponsePacket packet;
-    packet.receiver = command.sender;
+    Serial.println("Creating response packet");
+    packet.receiver = receiver;
     packet.sender = myAddr;
-    packet.seq_id = seqID_++;
+    packet.sequenceId = seqID_++;
     packet.timestamp = millis();
     packet.response = response;
+    Serial.println("Created response packet");
 
     uint8_t buffer[RESPONSE_SIZE] = {};
 
@@ -41,9 +56,9 @@ void LORA::sendResponse(const CommandPacket &command, const Response &response)
     memcpy(&buffer[4], &packet.timestamp, sizeof(uint32_t));
 
     // Sequence ID (4 bytes)
-    memcpy(&buffer[8], &packet.seq_id, sizeof(uint32_t));
+    memcpy(&buffer[8], &packet.sequenceId, sizeof(uint32_t));
 
-    memcpy(&buffer[12], &packet.response.command_seq_id, sizeof(uint32_t));
+    memcpy(&buffer[12], &packet.response.commandSeqId, sizeof(uint32_t));
     memcpy(&buffer[16], &packet.response.data, sizeof(packet.response.data));
 
     buffer[20] = '\r';
@@ -52,7 +67,7 @@ void LORA::sendResponse(const CommandPacket &command, const Response &response)
     Serial3.write(buffer, RESPONSE_SIZE);
 }
 
-TelemetryPacket &LORA::receiveTelemetry(uint8_t *buffer)
+TelemetryPacket LORA::receiveTelemetry(uint8_t *buffer)
 {
     TelemetryPacket packet{};
     // Parse header
@@ -63,7 +78,7 @@ TelemetryPacket &LORA::receiveTelemetry(uint8_t *buffer)
     packet.timestamp = timestamp;
     uint32_t seq_id;
     memcpy(&seq_id, &buffer[8], sizeof(uint32_t));
-    packet.seq_id = seq_id;
+    packet.sequenceId = seq_id;
 
     packet.telemetry.flightState = buffer[13];
 
@@ -73,7 +88,7 @@ TelemetryPacket &LORA::receiveTelemetry(uint8_t *buffer)
     packet.telemetry.barometricAlt = barometricAltitude;
 
     // Parse IMU data
-    ImuData imuData;
+    ImuData imuData{};
     memcpy(&imuData, &buffer[16], sizeof(ImuData));
     Serial.printf("IMU Data: Yaw=%04X, Pitch=%04X, Roll=%04X, AccelX=%04X, AccelY=%04X, AccelZ=%04X, "
                   "VelX=%04X, VelY=%04X, VelZ=%04X, PosX=%04X, PosY=%04X, PosZ=%04X\n",
@@ -155,7 +170,7 @@ TelemetryPacket &LORA::receiveTelemetry(uint8_t *buffer)
     return packet;
 }
 
-ResponsePacket &LORA::receiveResponse(uint8_t *buffer)
+ResponsePacket LORA::receiveResponse(uint8_t *buffer)
 {
     ResponsePacket packet{};
     // Parse header
@@ -166,12 +181,12 @@ ResponsePacket &LORA::receiveResponse(uint8_t *buffer)
     packet.timestamp = timestamp;
     uint32_t seq_id;
     memcpy(&seq_id, &buffer[8], sizeof(uint32_t));
-    packet.seq_id = seq_id;
+    packet.sequenceId = seq_id;
 
     // Parse response
     uint32_t command_seq_id;
     memcpy(&command_seq_id, &buffer[12], sizeof(uint32_t));
-    packet.response.command_seq_id = command_seq_id;
+    packet.response.commandSeqId = command_seq_id;
     memcpy(&packet.response.data, &buffer[16], sizeof(packet.response.data));
 
     Serial.println("Response data parsed successfully.");
@@ -179,10 +194,11 @@ ResponsePacket &LORA::receiveResponse(uint8_t *buffer)
 }
 
 std::optional<PacketType> LORA::parseHeader(uint8_t *buffer, size_t length){
-    if (length != COMMAND_SIZE && length != TELEMETRY_SIZE && length != RESPONSE_SIZE) {
-        Serial.printf("Invalid packet size of %d\n", length);
-        return;
-    }
+    // if (length != COMMAND_SIZE && length != TELEMETRY_SIZE && length != RESPONSE_SIZE) {
+    //     Serial.printf("Invalid packet size of %d\n", length);
+    //     return;
+    // }
+    Serial.println("Parsing header");
     uint8_t startByte = buffer[0];
     if (startByte != START_BYTE) {
         Serial.println("Invalid start byte!");
@@ -231,7 +247,7 @@ void receivePacket(PacketType packetType, uint8_t *packet){
   //  }
 }
 
-CommandPacket &LORA::receiveCommand(uint8_t *buffer)
+CommandPacket LORA::receiveCommand(uint8_t *buffer)
 {
     CommandPacket packet{};
     packet.sender = buffer[2];
@@ -241,19 +257,20 @@ CommandPacket &LORA::receiveCommand(uint8_t *buffer)
     packet.timestamp = timestamp;
     uint32_t seq_id;
     memcpy(&seq_id, &buffer[8], sizeof(uint32_t));
-    packet.seq_id = seq_id;
-    packet.command_id = static_cast<COMMAND_ID>(buffer[12]);
-    memcpy(&seq_id, &buffer[13], 8);
+    packet.sequenceId = seq_id;
+    packet.command.commandId = static_cast<COMMAND_ID>(buffer[12]);
+    memcpy(&packet.command.args, &buffer[13], sizeof(packet.command.args));
+    return packet;
 }
 
-void LORA::sendCommand(uint8_t receiverAddr, COMMAND_ID command_id)
+void LORA::sendCommand(uint8_t receiverAddr, Command& command)
 {
     CommandPacket packet;
     packet.receiver = receiverAddr;
     packet.sender = myAddr;
-    packet.seq_id = seqID_++;
+    packet.sequenceId = seqID_++;
     packet.timestamp = millis();
-    packet.command_id = command_id;
+    packet.command = command;
 
     uint8_t buffer[COMMAND_SIZE] = {};
 
@@ -266,17 +283,19 @@ void LORA::sendCommand(uint8_t receiverAddr, COMMAND_ID command_id)
     memcpy(&buffer[4], &packet.timestamp, sizeof(uint32_t));
 
     // Sequence ID (4 bytes)
-    memcpy(&buffer[8], &packet.seq_id, sizeof(uint32_t));
+    memcpy(&buffer[8], &packet.sequenceId, sizeof(uint32_t));
 
-    buffer[12] = packet.command_id;
-    buffer[13] = '\r';
-    buffer[14] = '\n';
+    buffer[12] = packet.command.commandId;
+    memcpy(&buffer[13], &packet.command.args, sizeof(packet.command.args));
+    buffer[21] = '\r';
+    buffer[22] = '\n';
 
+    Serial3.println("DEB");
     Serial3.write(buffer, COMMAND_SIZE);
     Serial.println("Sent Command Packet");
 }
 
-void LORA::sendTelemetry(TelemetryPacket &packet)
+void LORA::sendTelemetry(TelemetryPacket& packet)
 {
     uint8_t buffer[TELEMETRY_SIZE] = {};
 
@@ -285,72 +304,76 @@ void LORA::sendTelemetry(TelemetryPacket &packet)
     buffer[2] = packet.sender;
     buffer[3] = packet.receiver;
 
-    // Timestamp (4 bytes)
-    memcpy(&buffer[4], &packet.timestamp, sizeof(uint32_t));
+    for(int i=0; i<TELEMETRY_SIZE; i++){
+        buffer[i] = 0;
+    }
 
-    // Sequence ID (4 bytes)
-    memcpy(&buffer[8], &packet.seq_id, sizeof(uint32_t));
 
-    // Flight State (1 byte)
-    buffer[13] = packet.telemetry.flightState;
+    // // Timestamp (4 bytes)
+    // memcpy(&buffer[4], &packet.timestamp, sizeof(uint32_t));
 
-    // Barometric altitude (2 bytes)
-    memcpy(&buffer[14], &packet.telemetry.barometricAlt, sizeof(int16_t));
+    // // Sequence ID (4 bytes)
+    // memcpy(&buffer[8], &packet.sequenceId, sizeof(uint32_t));
 
-    // IMU Data (12 bytes)
-    memcpy(&buffer[16], &packet.telemetry.imuData, sizeof(ImuData));
+    // // Flight State (1 byte)
+    // buffer[13] = packet.telemetry.flightState;
 
-    // Fins (4 bytes)
-    buffer[44] = packet.telemetry.fin1;
-    buffer[45] = packet.telemetry.fin2;
-    buffer[46] = packet.telemetry.fin3;
-    buffer[47] = packet.telemetry.fin4;
+    // // Barometric altitude (2 bytes)
+    // memcpy(&buffer[14], &packet.telemetry.barometricAlt, sizeof(int16_t));
 
-    // Battery data (4 bytes)
-    memcpy(&buffer[48], &packet.telemetry.mVBat, sizeof(uint16_t));  // mVBat
-    memcpy(&buffer[50], &packet.telemetry.mABat, sizeof(uint16_t));  // mABat
+    // // IMU Data (12 bytes)
+    // memcpy(&buffer[16], &packet.telemetry.imuData, sizeof(ImuData));
 
-    // Load cell (2 bytes)
-    memcpy(&buffer[52], &packet.telemetry.loadCell, sizeof(uint16_t));
+    // // Fins (4 bytes)
+    // buffer[44] = packet.telemetry.fin1;
+    // buffer[45] = packet.telemetry.fin2;
+    // buffer[46] = packet.telemetry.fin3;
+    // buffer[47] = packet.telemetry.fin4;
 
-    // Temperature and additional data (4 bytes)
-    buffer[54] = packet.telemetry.temp;
-    buffer[55] = packet.telemetry.mejPercent;
-    buffer[56] = packet.telemetry.cjPercent;
-    buffer[57] = packet.telemetry.datajournalPercent;
+    // // Battery data (4 bytes)
+    // memcpy(&buffer[48], &packet.telemetry.mVBat, sizeof(uint16_t));  // mVBat
+    // memcpy(&buffer[50], &packet.telemetry.mABat, sizeof(uint16_t));  // mABat
 
-    // GPS data (12 bytes)
-    memcpy(&buffer[58], &packet.telemetry.gpsLat, sizeof(int32_t));
-    memcpy(&buffer[62], &packet.telemetry.gpsLon, sizeof(int32_t));
-    memcpy(&buffer[66], &packet.telemetry.gpsAlt, sizeof(int16_t));
+    // // Load cell (2 bytes)
+    // memcpy(&buffer[52], &packet.telemetry.loadCell, sizeof(uint16_t));
 
-    // Detections (3 bytes)
-    buffer[68] = packet.telemetry.takeOffDetection;
-    buffer[69] = packet.telemetry.apogeeDetection;
-    buffer[70] = packet.telemetry.landingDetection;
+    // // Temperature and additional data (4 bytes)
+    // buffer[54] = packet.telemetry.temp;
+    // buffer[55] = packet.telemetry.mejPercent;
+    // buffer[56] = packet.telemetry.cjPercent;
+    // buffer[57] = packet.telemetry.datajournalPercent;
 
-    // Apogee (2 bytes)
-    memcpy(&buffer[71], &packet.telemetry.apogee, sizeof(int16_t));
+    // // GPS data (12 bytes)
+    // memcpy(&buffer[58], &packet.telemetry.gpsLat, sizeof(int32_t));
+    // memcpy(&buffer[62], &packet.telemetry.gpsLon, sizeof(int32_t));
+    // memcpy(&buffer[66], &packet.telemetry.gpsAlt, sizeof(int16_t));
 
-    // Pyro flags (2 bytes)
-    uint8_t pyroFlags = 0;
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro1_safe << 0);
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro1_cont << 1);
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro1_fire << 2);
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro2_safe << 3);
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro2_cont << 4);
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro2_fire << 5);
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro3_safe << 6);
-    pyroFlags |= (packet.telemetry.pyroFlags.pyro3_cont << 7);
-    buffer[81] = pyroFlags;
+    // // Detections (3 bytes)
+    // buffer[68] = packet.telemetry.takeOffDetection;
+    // buffer[69] = packet.telemetry.apogeeDetection;
+    // buffer[70] = packet.telemetry.landingDetection;
 
-    uint8_t pyroFlagsAd = 0;
-    pyroFlagsAd |= (packet.telemetry.pyroFlags.pyro3_fire << 0);
-    buffer[82] = pyroFlagsAd;
+    // // Apogee (2 bytes)
+    // memcpy(&buffer[71], &packet.telemetry.apogee, sizeof(int16_t));
 
-    buffer[83] = '\r';
-    buffer[84] = '\n';
+    // // Pyro flags (2 bytes)
+    // uint8_t pyroFlags = 0;
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro1_safe << 0);
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro1_cont << 1);
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro1_fire << 2);
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro2_safe << 3);
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro2_cont << 4);
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro2_fire << 5);
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro3_safe << 6);
+    // pyroFlags |= (packet.telemetry.pyroFlags.pyro3_cont << 7);
+    // buffer[81] = pyroFlags;
+
+    // uint8_t pyroFlagsAd = 0;
+    // pyroFlagsAd |= (packet.telemetry.pyroFlags.pyro3_fire << 0);
+    // buffer[82] = pyroFlagsAd;
+
+    buffer[TELEMETRY_SIZE-2] = '\r';
+    buffer[TELEMETRY_SIZE-1] = '\n';
 
     Serial3.write(buffer, TELEMETRY_SIZE);
-    Serial.println("Sent Telemetry Packet");
 }
