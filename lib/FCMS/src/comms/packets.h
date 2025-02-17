@@ -1,10 +1,14 @@
 #include <sstream>
 
 
-#define TELEMETRY_SIZE 85
-#define COMMAND_SIZE 23
-#define RESPONSE_SIZE 22
-#define START_BYTE 0xAA
+#define TELEMETRY_LEN 45//70
+#define COMMAND_SIZE 9
+#define RESPONSE_SIZE 8
+#define DUCC_HEADER_SIZE 2
+#define DUCC_PREFIX_SIZE 3
+#define AVDCP2_HEADER_SIZE 11
+#define DUCC_CRC_SIZE 1
+#define MAX_PAYLOAD_SIZE 120
 
 enum PacketType{
   PACKET_TELEMETRY=0x01,
@@ -18,12 +22,12 @@ public:
     sender(sender_), receiver(receiver_), timestamp(timestamp_), sequenceId(seq_id_){};
     BasePacket(): sender(0), receiver(0), timestamp(0), sequenceId(0){};
 
-    const uint8_t startByte=0xAA;
     virtual uint8_t getPacketType() const = 0;
     uint8_t sender;
     uint8_t receiver;
     uint32_t timestamp;
     uint32_t sequenceId;
+    virtual uint8_t getPayloadLen() const = 0;
 };
 
 struct ImuData {
@@ -48,20 +52,29 @@ enum COMMAND_ID{
 struct Command{
     COMMAND_ID commandId;
     uint8_t args[8];
-
-    Command(): commandId(){};
-    Command(Command& other): commandId(other.commandId){
-        for (int i=0; i<8; i++){
-            args[i] = other.args[i];
-        }
-    };
 };
 
-class CommandPacket : public BasePacket{
+class CommandPacketRx : public BasePacket{
+public:
+    int16_t rssi;
+    int8_t snr;
+    Command command;
+    uint8_t getPacketType() const override {
+        return PACKET_COMMAND;
+    }
+    uint8_t getPayloadLen() const override {
+        return COMMAND_SIZE+DUCC_PREFIX_SIZE;
+    }
+};
+
+class CommandPacketTx : public BasePacket{
 public:
     Command command;
     uint8_t getPacketType() const override {
         return PACKET_COMMAND;
+    }
+    uint8_t getPayloadLen() const override {
+        return COMMAND_SIZE;
     }
 };
 
@@ -113,14 +126,27 @@ struct Telemetry {
 
 };
 
-class TelemetryPacket : public BasePacket {
+class TelemetryPacketRx : public BasePacket {
 public:
-    // TelemetryPacket() : BasePacket() {}
-    // TelemetryPacket(Telemetry& telemetry) : BasePacket(), telemetry(telemetry) {}
-
+    int16_t rssi;
+    int8_t snr;
     Telemetry telemetry;
     uint8_t getPacketType() const override {
         return PACKET_TELEMETRY;
+    }
+    uint8_t getPayloadLen() const override {
+        return TELEMETRY_LEN+DUCC_PREFIX_SIZE;
+    }
+};
+
+class TelemetryPacketTx : public BasePacket {
+public:
+    Telemetry telemetry;
+    uint8_t getPacketType() const override {
+        return PACKET_TELEMETRY;
+    }
+    uint8_t getPayloadLen() const override {
+        return TELEMETRY_LEN;
     }
 };
 
@@ -129,10 +155,26 @@ struct Response{
     uint8_t data[4];
 };
 
-class ResponsePacket : public BasePacket{
+class ResponsePacketRx : public BasePacket{
+public:
+    int16_t rssi;
+    int8_t snr;
+    Response response;
+    uint8_t getPacketType() const override {
+        return PACKET_RESPONSE;
+    }
+    uint8_t getPayloadLen() const override {
+        return RESPONSE_SIZE+DUCC_PREFIX_SIZE;
+    }
+};
+
+class ResponsePacketTx : public BasePacket{
 public:
     Response response;
     uint8_t getPacketType() const override {
         return PACKET_RESPONSE;
+    }
+    uint8_t getPayloadLen() const override {
+        return RESPONSE_SIZE;
     }
 };

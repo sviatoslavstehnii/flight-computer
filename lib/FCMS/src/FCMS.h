@@ -10,7 +10,7 @@
 #include "gps/gps.h"
 #include "sdmc/sdmc.h"
 #include "ina/ina.h"
-#include "lora/transceiver.h"
+#include "comms/transceiver.h"
 
 #include <sstream>
 #include <iomanip>

@@ -1,7 +1,7 @@
 #include "flash/flash.h"
 #include "sdmc/sdmc.h"
 #include "ina/ina.h"
-#include "lora/transceiver.h"
+#include "comms/transceiver.h"
 
 #include <sstream>
 #include <iomanip>
@@ -15,6 +15,8 @@
 #define BUZZER_PIN 28
 #define HEALTH_CHECK_TIMEOUT 10000
 #define COMMIT_TIMEOUT 5000
+
+// #define GroundControl Serial1
 
 // Ground Station Managment System 
 enum STATE {
@@ -35,11 +37,14 @@ class GSMS {
 
     STATE curr_state_;
 
+    std::chrono::time_point<std::chrono::steady_clock> prevTime{};
+    std::chrono::time_point<std::chrono::steady_clock> time{};
+
     uint32_t commitMillis = 0;
     uint32_t commitInterval = 100;
 
     uint32_t commsMillis = 0;
-    uint32_t commsInterval = 100;
+    uint32_t commsInterval = 20;
 
     uint32_t monitorMillis = 0;
     uint32_t monitorInterval = 400;

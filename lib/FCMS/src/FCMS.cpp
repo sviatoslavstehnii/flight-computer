@@ -16,7 +16,7 @@ void FCMS::setup()
   pinMode(LED_RED_PIN, OUTPUT);
   pinMode(LED_GREEN_PIN, OUTPUT);
   pinMode(LED_BLUE_PIN, OUTPUT);
-  setColor(50, 0, 0);
+  setColor(255, 0, 0);
 
   Serial.println("Set up FCMS");
   Wire.begin();
@@ -28,22 +28,22 @@ void FCMS::setup()
   imu9dof_.setup();
   gps_.setup();
   // pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(140);
-  digitalWrite(BUZZER_PIN, LOW);
-  delay(140);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(140);
-  digitalWrite(BUZZER_PIN, LOW);
-  delay(140);
+  // digitalWrite(BUZZER_PIN, HIGH);
+  // delay(140);
+  // digitalWrite(BUZZER_PIN, LOW);
+  // delay(140);
+  // digitalWrite(BUZZER_PIN, HIGH);
+  // delay(140);
+  // digitalWrite(BUZZER_PIN, LOW);
+  // delay(140);
 
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(140);
-  digitalWrite(BUZZER_PIN, LOW);
-  delay(140);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(140);
-  digitalWrite(BUZZER_PIN, LOW);
+  // digitalWrite(BUZZER_PIN, HIGH);
+  // delay(140);
+  // digitalWrite(BUZZER_PIN, LOW);
+  // delay(140);
+  // digitalWrite(BUZZER_PIN, HIGH);
+  // delay(140);
+  // digitalWrite(BUZZER_PIN, LOW);
   // flash_.setup(16777216, true);
   // char setup_data[] = "setup";
   // if (!flash_.writeToDJ(setup_data, sizeof(setup_data)) ) {
@@ -294,39 +294,39 @@ void FCMS::step()
     }
     if (time_now_ms - commsMillis >= commsInterval){
       commsMillis = time_now_ms;
-      delay(100);
       transceiver.receive();
+       
       if (transceiver.hasCommand()) {
-        auto command_id = transceiver.popCommand();
+        auto packetRx = transceiver.popCommand();
         // process command
         Serial.println("Received command");
         // send response
         Response response;
-        response.commandSeqId = command_id.sequenceId;
+        response.commandSeqId = packetRx.sequenceId;
         
         transceiver.sendResponse(GROUND_STATION_ADDR, response);
       }
       Telemetry tel = mapTelemetry();
-      transceiver.sendTelemetry(GROUND_ADDR, tel);
+      // transceiver.sendTelemetry(GROUND_ADDR, tel);
     }
     if ((time_now_ms - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = time_now_ms;
       //commitFlash();
-      Serial.print("{\"roll\":");
-      Serial.print(sensor_data_.rollRate1, 2);
-      Serial.print(",\"pitch\":");
-      Serial.print(sensor_data_.pitchRate1, 2);
-      Serial.print(",\"yaw\":");
-      Serial.print(sensor_data_.yawRate1, 2);
-      Serial.print(",\"lat\":");
-      Serial.print(sensor_data_.lat, 6);
-      Serial.print(",\"lon\":");
-      Serial.print(sensor_data_.lon, 6);
-      Serial.print(",\"alt\":");
-      Serial.print(sensor_data_.alt1, 2);
-      Serial.print(",\"state\":");
-      Serial.print(state);
-      Serial.println("}");
+      // Serial.print("{\"roll\":");
+      // Serial.print(sensor_data_.rollRate1, 2);
+      // Serial.print(",\"pitch\":");
+      // Serial.print(sensor_data_.pitchRate1, 2);
+      // Serial.print(",\"yaw\":");
+      // Serial.print(sensor_data_.yawRate1, 2);
+      // Serial.print(",\"lat\":");
+      // Serial.print(sensor_data_.lat, 6);
+      // Serial.print(",\"lon\":");
+      // Serial.print(sensor_data_.lon, 6);
+      // Serial.print(",\"alt\":");
+      // Serial.print(sensor_data_.alt1, 2);
+      // Serial.print(",\"state\":");
+      // Serial.print(state);
+      // Serial.println("}");
     }
 
     if (time_now_ms - estimateGPSMillis >= estimateGPSInterval) {
