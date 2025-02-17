@@ -21,7 +21,6 @@ void GSMS::step()
         Serial.printf("Received telemetry from %d\n", packet.sender);
         // process telemetry
     }
-    // transceiver.retryCommands(VEHICLE_ADDR);
     if (std::chrono::duration_cast<std::chrono::milliseconds>(time - prevTime).count() > 5000){
         prevTime = time;
         transceiver.retryCommands();

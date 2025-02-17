@@ -307,7 +307,7 @@ void FCMS::step()
         transceiver.sendResponse(GROUND_STATION_ADDR, response);
       }
       Telemetry tel = mapTelemetry();
-      // transceiver.sendTelemetry(GROUND_ADDR, tel);
+      transceiver.sendTelemetry(GROUND_ADDR, tel);
     }
     if ((time_now_ms - commitMillis >= commitInterval) && dataLogingStarted) {
       commitMillis = time_now_ms;
