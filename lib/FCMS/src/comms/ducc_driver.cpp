@@ -1,32 +1,40 @@
-#include "lora_driver.h"
+#include "ducc_driver.h"
 
 
-void LoRaDriver::setup(){
-    Serial.print("Initializing LoRa... ");
-    Serial3.begin(115200);
+void DUCCDriver::setup(){
+    Serial.print("Initializing Comms... ");
+    serial.begin(115200);
     Serial.println("Done");
-    // Serial3.println("DEB");
+    // serial.println("DEB");
 
     // int time_s = 10;
     // size_t start_time = millis();
     // while(millis() - start_time < time_s * 1000){
-    //     if (Serial3.available()){
-    //         char c = Serial3.read();
+    //     if (serial.available()){
+    //         char c = serial.read();
     //         Serial.print(c);
     //     }
     // }
 }
 
-uint32_t LoRaDriver::getMyAddress() const {
+void DUCCDriver::setup_relay(HardwareSerial *relaySerial)
+{
+    if (relaySerial){
+        relay_serial->begin(115200);
+        relay_serial = relaySerial;
+    }
+}
+
+uint32_t DUCCDriver::getMyAddress() const {
     return myAddr;
 }
 
-bool LoRaDriver::available() const
+bool DUCCDriver::available() const
 {
-    return Serial3.available();
+    return serial.available();
 }
 
-bool LoRaDriver::update() {
+std::unique_ptr<BasePacketRx> DUCCDriver::read() {
     while (reset) {
         if (ringBuffer.isEmpty()) {
             reset = false;
@@ -41,8 +49,8 @@ bool LoRaDriver::update() {
         }
     }
     
-    while (Serial3.available() && !ringBuffer.isFull()){
-        uint8_t readByte = Serial3.read();
+    while (serial.available() && !ringBuffer.isFull()){
+        uint8_t readByte = serial.read();
 
         // Serial.print(readByte, HEX);
         // Serial.print(" ");
@@ -61,7 +69,7 @@ bool LoRaDriver::update() {
             // reset = true;
             // ringBuffer.pop();
             // packetFound = false;
-            return false;
+            return nullptr;
         }
         
         uint8_t length = header[1];
@@ -70,7 +78,7 @@ bool LoRaDriver::update() {
             reset = true;
             ringBuffer.pop();
             packetFound = false;
-            return false;
+            return nullptr;
         }
         
         if (ringBuffer.size() >= length + DUCC_HEADER_SIZE) {
@@ -81,7 +89,7 @@ bool LoRaDriver::update() {
                 // reset = true;
                 // ringBuffer.pop();
                 // packetFound = false;
-                return false;
+                return nullptr;
             }
             
             uint8_t crcPacket = packet[length+1];
@@ -97,7 +105,12 @@ bool LoRaDriver::update() {
 
             if (calculatedCrc == crcPacket) {
                 ringBuffer.erase(DUCC_HEADER_SIZE + length);
-                return parseHeader(header, &packet[DUCC_HEADER_SIZE]);
+                auto ptr = parseHeader(header, &packet[DUCC_HEADER_SIZE]);
+                if(relay_serial && ptr){
+                    // Relay signal the other networks or simply repeat signal.
+                    relay_serial->write(packet, length+DUCC_HEADER_SIZE);
+                }
+                return ptr;
             } else {
                 reset = true;
                 ringBuffer.pop();
@@ -105,46 +118,32 @@ bool LoRaDriver::update() {
             }
         }
     }
-    return false;
+    return nullptr;
 }
 
-bool LoRaDriver::parseHeader(uint8_t* header, uint8_t* data) {
+std::unique_ptr<BasePacketRx> DUCCDriver::parseHeader(uint8_t* header, uint8_t* data) {
     uint8_t length = header[1];
-    if (length > MAX_PAYLOAD_SIZE) return false;
-    if (data[5] != myAddr){
+    if (length > MAX_PAYLOAD_SIZE) return nullptr;
+    
+    if (data[5] != getMyAddress()) {
         Serial.println("This packet is not for me");
-        return;
+        return nullptr;
     }
 
     uint8_t packetType = data[3];
     switch (packetType) {
-        case PACKET_TELEMETRY: {
-            auto packet = receiveTelemetry(data);
-            receivedTelemetry.push(packet);
-            break;
-        }
-        case PACKET_RESPONSE: {
-            auto packet = receiveResponse(data);
-            receivedResponses.push(packet);
-
-            // Notify if callback is set
-            if (responseCallback_) {
-                responseCallback_(packet);
-            }
-            break;
-        }
-        case PACKET_COMMAND: {
-            auto packet = receiveCommand(data);
-            receivedCommands.push(packet);
-            break;
-        }
+        case PACKET_TELEMETRY:
+            return std::make_unique<TelemetryPacketRx>(receiveTelemetry(data));
+        case PACKET_RESPONSE:
+            return std::make_unique<ResponsePacketRx>(receiveResponse(data));
+        case PACKET_COMMAND:
+            return std::make_unique<CommandPacketRx>(receiveCommand(data));
         default:
-            return false;
+            return nullptr;
     }
-    return true;
 }
 
-void LoRaDriver::sendResponse(ResponsePacketTx& packet)
+void DUCCDriver::sendResponse(ResponsePacketTx& packet)
 {
     Serial.println("Sending response");
     uint8_t sys_len = packet.getPayloadLen()+DUCC_HEADER_SIZE+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
@@ -157,10 +156,10 @@ void LoRaDriver::sendResponse(ResponsePacketTx& packet)
     memcpy(&buffer[17], &packet.response.data, sizeof(packet.response.data));
 
     buffer[sys_len-1] = calcCRC8(&buffer[2], AVDCP2_HEADER_SIZE+packet.getPayloadLen());
-    Serial3.write(buffer, sys_len);
+    serial.write(buffer, sys_len);
 }
 
-TelemetryPacketRx LoRaDriver::receiveTelemetry(uint8_t *buffer)
+TelemetryPacketRx DUCCDriver::receiveTelemetry(uint8_t *buffer)
 {
     TelemetryPacketRx packet{};
     memcpy(&packet.rssi, &buffer[0], sizeof(int16_t));
@@ -264,7 +263,7 @@ TelemetryPacketRx LoRaDriver::receiveTelemetry(uint8_t *buffer)
     return packet;
 }
 
-ResponsePacketRx LoRaDriver::receiveResponse(uint8_t *buffer)
+ResponsePacketRx DUCCDriver::receiveResponse(uint8_t *buffer)
 {
     ResponsePacketRx packet{};
     // Parse header
@@ -289,7 +288,7 @@ ResponsePacketRx LoRaDriver::receiveResponse(uint8_t *buffer)
     return packet;
 }
 
-CommandPacketRx LoRaDriver::receiveCommand(uint8_t *buffer)
+CommandPacketRx DUCCDriver::receiveCommand(uint8_t *buffer)
 {
     CommandPacketRx packet{};
     // Parse header
@@ -308,7 +307,7 @@ CommandPacketRx LoRaDriver::receiveCommand(uint8_t *buffer)
     return packet;
 }
 
-void LoRaDriver::sendCommand(CommandPacketTx& packet)
+void DUCCDriver::sendCommand(CommandPacketTx& packet)
 {
     uint8_t sys_len = packet.getPayloadLen()+DUCC_HEADER_SIZE+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
     uint8_t buffer[sys_len] = {};
@@ -319,11 +318,11 @@ void LoRaDriver::sendCommand(CommandPacketTx& packet)
     memcpy(&buffer[14], &packet.command.args, sizeof(packet.command.args));
 
     buffer[sys_len-1] = calcCRC8(&buffer[2], AVDCP2_HEADER_SIZE+packet.getPayloadLen());
-    Serial3.write(buffer, sys_len);
+    serial.write(buffer, sys_len);
     Serial.println("Sent Command Packet");
 }
 
-void LoRaDriver::packHeaders(uint8_t* buffer, BasePacket& packet)
+void DUCCDriver::packHeaders(uint8_t* buffer, BasePacket& packet)
 {
     buffer[0] = START_BYTE;
     buffer[1] = packet.getPayloadLen()+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
@@ -334,7 +333,7 @@ void LoRaDriver::packHeaders(uint8_t* buffer, BasePacket& packet)
     memcpy(&buffer[9], &packet.sequenceId, sizeof(uint32_t));
 }
 
-void LoRaDriver::sendTelemetry(TelemetryPacketTx& packet)
+void DUCCDriver::sendTelemetry(TelemetryPacketTx& packet)
 {
     uint8_t sys_len = packet.getPayloadLen()+DUCC_HEADER_SIZE+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
     uint8_t buffer[sys_len] = {};
@@ -407,5 +406,5 @@ void LoRaDriver::sendTelemetry(TelemetryPacketTx& packet)
     // Serial.println();
 
     buffer[sys_len-1] = calcCRC8(&buffer[2], AVDCP2_HEADER_SIZE+packet.getPayloadLen());
-    Serial3.write(buffer, sys_len);
+    serial.write(buffer, sys_len);
 }

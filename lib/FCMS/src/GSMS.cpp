@@ -5,7 +5,7 @@ void GSMS::setup()
     Serial.begin(9600);
     Serial.println("START GS");
     // GroundControl.begin(115200);
-    transceiver.setup();
+    transceiver.setup(&Serial1);
     Command command{};
     command.commandId=PING;
     transceiver.sendCommand(VEHICLE_ADDR, command);

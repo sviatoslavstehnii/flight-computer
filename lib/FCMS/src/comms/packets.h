@@ -30,6 +30,16 @@ public:
     virtual uint8_t getPayloadLen() const = 0;
 };
 
+class BasePacketRx: public BasePacket{
+public:
+    int16_t rssi;
+    int8_t snr;
+};
+
+class BasePacketTx: public BasePacket{
+
+};
+
 struct ImuData {
   uint16_t yaw;
   uint16_t pitch;
@@ -54,10 +64,8 @@ struct Command{
     uint8_t args[8];
 };
 
-class CommandPacketRx : public BasePacket{
+class CommandPacketRx : public BasePacketRx{
 public:
-    int16_t rssi;
-    int8_t snr;
     Command command;
     uint8_t getPacketType() const override {
         return PACKET_COMMAND;
@@ -67,7 +75,7 @@ public:
     }
 };
 
-class CommandPacketTx : public BasePacket{
+class CommandPacketTx : public BasePacketTx{
 public:
     Command command;
     uint8_t getPacketType() const override {
@@ -126,10 +134,8 @@ struct Telemetry {
 
 };
 
-class TelemetryPacketRx : public BasePacket {
+class TelemetryPacketRx : public BasePacketRx {
 public:
-    int16_t rssi;
-    int8_t snr;
     Telemetry telemetry;
     uint8_t getPacketType() const override {
         return PACKET_TELEMETRY;
@@ -139,7 +145,7 @@ public:
     }
 };
 
-class TelemetryPacketTx : public BasePacket {
+class TelemetryPacketTx : public BasePacketTx {
 public:
     Telemetry telemetry;
     uint8_t getPacketType() const override {
@@ -155,10 +161,8 @@ struct Response{
     uint8_t data[4];
 };
 
-class ResponsePacketRx : public BasePacket{
+class ResponsePacketRx : public BasePacketRx{
 public:
-    int16_t rssi;
-    int8_t snr;
     Response response;
     uint8_t getPacketType() const override {
         return PACKET_RESPONSE;
@@ -168,7 +172,7 @@ public:
     }
 };
 
-class ResponsePacketTx : public BasePacket{
+class ResponsePacketTx : public BasePacketTx{
 public:
     Response response;
     uint8_t getPacketType() const override {

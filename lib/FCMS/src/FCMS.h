@@ -59,7 +59,7 @@ class FCMS {
     Flash flash_;
     SDMC sdmc_{};
     GPS gps_{};
-    Transceiver transceiver{VEHICLE_ADDR};
+    Transceiver transceiver{Serial3, VEHICLE_ADDR};
     
 
     int land = 0;

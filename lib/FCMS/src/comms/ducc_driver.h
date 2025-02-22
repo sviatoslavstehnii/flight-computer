@@ -8,21 +8,18 @@
 #include "packets.h"
 #include <Arduino.h>
 #include "ring_buffer.h"
-#include "my_queue_t.h"
+#include <memory>
 
 #define START_BYTE 0xAA
 #define CRC_POLY 0xD5 // CRC-8 Polynomial 0xD5
 
-class LoRaDriver {
+class DUCCDriver {
 public:
-    LoRaDriver(uint8_t myAddress): myAddr(myAddress) {};
-
-    using ResponseCallback = std::function<void(const ResponsePacketRx&)>;
-    void setResponseCallback(ResponseCallback cb) {
-        responseCallback_ = std::move(cb);
-    }
+    DUCCDriver(HardwareSerial& serialPort, uint8_t myAddress) 
+        : serial(serialPort), myAddr(myAddress) {}
 
     void setup();
+    void setup_relay(HardwareSerial *relaySerial);
 
     void sendCommand(CommandPacketTx& packet);
     void sendTelemetry(TelemetryPacketTx &packet);
@@ -32,13 +29,13 @@ public:
     ResponsePacketRx receiveResponse(uint8_t *buffer);
     CommandPacketRx receiveCommand(uint8_t *buffer);
 
-    bool parseHeader(uint8_t* header, uint8_t* data);
+    std::unique_ptr<BasePacketRx> parseHeader(uint8_t* header, uint8_t* data);
     void packHeaders(uint8_t *buffer, BasePacket &packet);
 
     uint32_t getMyAddress() const;
 
     bool available() const;
-    bool update();
+    std::unique_ptr<BasePacketRx> read();
 
     static uint8_t calcCRC8(const uint8_t* data, size_t length) {
         uint8_t crc = 0xFF;
@@ -55,23 +52,14 @@ public:
         return crc;
     }
 
-    bool hasTelemetry() { return !receivedTelemetry.empty(); }
-    TelemetryPacketRx popTelemetry() { return receivedTelemetry.pop(); }
-    bool hasCommand() { return !receivedCommands.empty(); }
-    CommandPacketRx popCommand() { return receivedCommands.pop(); }
-    bool hasResponse() { return !receivedResponses.empty(); }
-    ResponsePacketRx popResponse() { return receivedResponses.pop(); }
-
 private:
+    HardwareSerial& serial;
+    HardwareSerial *relay_serial;
     uint8_t myAddr;
     uint32_t seqID_{0};
     RingBuffer ringBuffer;
     bool packetFound = false;
     bool reset = false;
-    my_queue_t<TelemetryPacketRx> receivedTelemetry{10};
-    my_queue_t<CommandPacketRx> receivedCommands {10};
-    my_queue_t<ResponsePacketRx> receivedResponses {10};
-    ResponseCallback responseCallback_;
 };
 
-#endif // LORA_H
+#endif

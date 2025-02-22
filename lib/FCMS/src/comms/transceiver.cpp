@@ -1,23 +1,9 @@
 #include "transceiver.h"
 
-void Transceiver::handleResponse(const ResponsePacketRx& packet) {
-    if (unrespondedCommands.find(packet.sequenceId) != unrespondedCommands.end()) {
-        unrespondedCommands.erase(packet.sequenceId);
-        commandRetries.erase(packet.sequenceId);
-        sentCommands.erase(packet.sequenceId);
-        Serial.printf("Response to command %d received.\n", packet.sequenceId);
-    } else {
-        Serial.printf("Unexpected response for command %d\n", packet.sequenceId);
-    }
-}
-
-void Transceiver::setup()
+void Transceiver::setup(HardwareSerial *relaySerial)
 {
     lora_.setup();
-
-    lora_.setResponseCallback([this](const ResponsePacketRx& packet) {
-        handleResponse(packet);
-    });
+    lora_.setup_relay(relaySerial);
 }
 
 void Transceiver::sendTelemetry(uint8_t receiver, Telemetry telemetry)
@@ -66,18 +52,38 @@ void Transceiver::retryCommands(){
 
 void Transceiver::receive()
 {
-    if (!lora_.available() || !lora_.update()){
+    if (!lora_.available()){
         return;
     }
 
-    // // Find command in unresponded
-    // if (unrespondedCommands.find(packet.sequenceId) != unrespondedCommands.end()) {
-    //     unrespondedCommands.erase(packet.sequenceId);
-    //     commandRetries.erase(packet.sequenceId);
-    //     Serial.printf("Response to command %d received.\n", packet.sequenceId);
-    // } else {
-    //     Serial.printf("Unexpected response for command %d\n", packet.sequenceId);
-    // }
+    auto packet_ptr = lora_.read();
+    if (!packet_ptr) return;
+
+    auto type = packet_ptr->getPacketType();
+    switch (type) {
+        case PACKET_TELEMETRY:
+            receivedTelemetry.push(static_cast<TelemetryPacketRx&>(*packet_ptr));
+            break;
+        case PACKET_COMMAND:
+            receivedCommands.push(static_cast<CommandPacketRx&>(*packet_ptr));
+            break;
+        case PACKET_RESPONSE:{
+            auto packet = static_cast<ResponsePacketRx&>(*packet_ptr);
+            receivedResponses.push(packet);
+
+            if (unrespondedCommands.find(packet.sequenceId) != unrespondedCommands.end()) {
+                unrespondedCommands.erase(packet.sequenceId);
+                commandRetries.erase(packet.sequenceId);
+                sentCommands.erase(packet.sequenceId);
+            } else {
+                Serial.printf("Unexpected response for command %d\n", packet.sequenceId);
+            }
+            break;
+        }
+        default:
+            Serial.println("Unknown packet type received.");
+            break;
+    }
 }
 
 void Transceiver::sendCommand(uint8_t receiver, Command command)

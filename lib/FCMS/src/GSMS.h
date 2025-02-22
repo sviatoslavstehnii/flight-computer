@@ -31,7 +31,7 @@ class GSMS {
   private:
     Flash flash_;
     SDMC sdmc_{};
-    Transceiver transceiver{GROUND_ADDR};
+    Transceiver transceiver{Serial3, GROUND_ADDR};
     
     int land = 0;
 
