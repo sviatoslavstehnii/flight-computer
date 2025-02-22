@@ -5,25 +5,39 @@ void GSMS::setup()
     Serial.begin(9600);
     Serial.println("START GS");
     // GroundControl.begin(115200);
-    transceiver.setup(&Serial1);
+    lora.setup();
+    server.setup();
     Command command{};
     command.commandId=PING;
-    transceiver.sendCommand(VEHICLE_ADDR, command);
+    lora.sendCommand(VEHICLE_ADDR, command);
 }
 
 void GSMS::step()
 {
     time = std::chrono::steady_clock::now();
-    transceiver.receive();
-    if (transceiver.hasTelemetry())
+    lora.receive();
+    server.receive();
+    if (lora.hasTelemetry())
     {
-        TelemetryPacketRx packet = transceiver.popTelemetry();
-        Serial.printf("Received telemetry from %d\n", packet.sender);
-        // process telemetry
+        auto packet = lora.popTelemetry();
+        Serial.printf("Relayed telemetry %d->%d\n ", packet.sender, packet.receiver);
+        server.sendTelemetry(packet.receiver, packet.telemetry);
     }
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(time - prevTime).count() > 5000){
+    if (lora.hasResponse())
+    {
+        auto packet = lora.popResponse();
+        Serial.printf("Relayed response %d->%d\n ", packet.sender, packet.receiver);
+        server.sendResponse(packet.receiver, packet.response);
+    }
+    if (server.hasCommand()){
+        auto packet = server.popCommand();
+        Serial.printf("Relayed command %d->%d\n ", packet.sender, packet.receiver);
+        lora.sendCommand(packet.receiver, packet.command);
+    }
+    const int retry_period = 2000;
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(time - prevTime).count() > retry_period){
         prevTime = time;
-        transceiver.retryCommands();
+        lora.retryCommands();
     }
 }
 

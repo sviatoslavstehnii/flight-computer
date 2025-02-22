@@ -19,7 +19,6 @@ public:
         : serial(serialPort), myAddr(myAddress) {}
 
     void setup();
-    void setup_relay(HardwareSerial *relaySerial);
 
     void sendCommand(CommandPacketTx& packet);
     void sendTelemetry(TelemetryPacketTx &packet);
@@ -54,7 +53,6 @@ public:
 
 private:
     HardwareSerial& serial;
-    HardwareSerial *relay_serial;
     uint8_t myAddr;
     uint32_t seqID_{0};
     RingBuffer ringBuffer;

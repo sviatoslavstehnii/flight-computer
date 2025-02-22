@@ -17,14 +17,6 @@ void DUCCDriver::setup(){
     // }
 }
 
-void DUCCDriver::setup_relay(HardwareSerial *relaySerial)
-{
-    if (relaySerial){
-        relay_serial->begin(115200);
-        relay_serial = relaySerial;
-    }
-}
-
 uint32_t DUCCDriver::getMyAddress() const {
     return myAddr;
 }
@@ -51,7 +43,6 @@ std::unique_ptr<BasePacketRx> DUCCDriver::read() {
     
     while (serial.available() && !ringBuffer.isFull()){
         uint8_t readByte = serial.read();
-
         // Serial.print(readByte, HEX);
         // Serial.print(" ");
         
@@ -105,12 +96,7 @@ std::unique_ptr<BasePacketRx> DUCCDriver::read() {
 
             if (calculatedCrc == crcPacket) {
                 ringBuffer.erase(DUCC_HEADER_SIZE + length);
-                auto ptr = parseHeader(header, &packet[DUCC_HEADER_SIZE]);
-                if(relay_serial && ptr){
-                    // Relay signal the other networks or simply repeat signal.
-                    relay_serial->write(packet, length+DUCC_HEADER_SIZE);
-                }
-                return ptr;
+                return parseHeader(header, &packet[DUCC_HEADER_SIZE]);
             } else {
                 reset = true;
                 ringBuffer.pop();

@@ -10,9 +10,9 @@
 class Transceiver {
 public:
     Transceiver(HardwareSerial &serial, uint8_t myAddr):
-        lora_(serial, myAddr) {};
+        ducc_(serial, myAddr) {};
 
-    void setup(HardwareSerial *relaySerial=nullptr);
+    void setup();
 
     void receive();
     void retryCommands();
@@ -28,7 +28,7 @@ public:
     ResponsePacketRx popResponse() { return receivedResponses.pop(); }
 
 private:
-    DUCCDriver lora_;
+    DUCCDriver ducc_;
     uint32_t _seqId{0};
     uint32_t newSeqId() { return _seqId++; }
 

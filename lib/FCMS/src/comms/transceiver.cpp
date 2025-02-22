@@ -1,33 +1,32 @@
 #include "transceiver.h"
 
-void Transceiver::setup(HardwareSerial *relaySerial)
+void Transceiver::setup()
 {
-    lora_.setup();
-    lora_.setup_relay(relaySerial);
+    ducc_.setup();
 }
 
 void Transceiver::sendTelemetry(uint8_t receiver, Telemetry telemetry)
 {
     // send telemetry
     TelemetryPacketTx packet;
-    packet.sender = lora_.getMyAddress();
+    packet.sender = ducc_.getMyAddress();
     packet.receiver = receiver;
     packet.timestamp = millis();
     packet.sequenceId = newSeqId();
     packet.telemetry = telemetry;
-    lora_.sendTelemetry(packet);
+    ducc_.sendTelemetry(packet);
 }
 
 void Transceiver::sendResponse(uint8_t receiver, Response response)
 {
     ResponsePacketTx packet;
-    packet.sender = lora_.getMyAddress();
+    packet.sender = ducc_.getMyAddress();
     packet.receiver = receiver;
     packet.timestamp = millis();
     packet.sequenceId = newSeqId();
     packet.response = response;
 
-    lora_.sendResponse(packet);
+    ducc_.sendResponse(packet);
 }
 
 void Transceiver::retryCommands(){
@@ -43,7 +42,7 @@ void Transceiver::retryCommands(){
         auto time = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::milliseconds>(time - sentCommands[seqId]).count() > TIMEOUT_MS){
             packet.timestamp = millis();
-            lora_.sendCommand(packet);
+            ducc_.sendCommand(packet);
             commandRetries[seqId]++;
             Serial.printf("Command %d retry %d\n", seqId, commandRetries[seqId]);
         }
@@ -52,11 +51,11 @@ void Transceiver::retryCommands(){
 
 void Transceiver::receive()
 {
-    if (!lora_.available()){
+    if (!ducc_.available()){
         return;
     }
 
-    auto packet_ptr = lora_.read();
+    auto packet_ptr = ducc_.read();
     if (!packet_ptr) return;
 
     auto type = packet_ptr->getPacketType();
@@ -89,7 +88,7 @@ void Transceiver::receive()
 void Transceiver::sendCommand(uint8_t receiver, Command command)
 {
     CommandPacketTx packet;
-    packet.sender = lora_.getMyAddress();
+    packet.sender = ducc_.getMyAddress();
     packet.receiver = receiver;
     packet.timestamp = millis();
     packet.sequenceId = newSeqId();
@@ -97,7 +96,7 @@ void Transceiver::sendCommand(uint8_t receiver, Command command)
 
     uint32_t seqId = packet.sequenceId;
 
-    lora_.sendCommand(packet);
+    ducc_.sendCommand(packet);
     sentCommands[seqId] = std::chrono::steady_clock::now();
     unrespondedCommands[seqId] = packet;
     commandRetries[seqId] = 0;
