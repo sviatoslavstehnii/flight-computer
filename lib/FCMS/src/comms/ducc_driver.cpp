@@ -1,11 +1,9 @@
 #include "ducc_driver.h"
 
-
-void DUCCDriver::setup(){
+void DUCCDriver::setup()
+{
     Serial.print("Initializing Comms... ");
-    serial.begin(115200);
     Serial.println("Done");
-    // serial.println("DEB");
 
     // int time_s = 10;
     // size_t start_time = millis();
@@ -17,7 +15,8 @@ void DUCCDriver::setup(){
     // }
 }
 
-uint32_t DUCCDriver::getMyAddress() const {
+uint32_t DUCCDriver::getMyAddress() const
+{
     return myAddr;
 }
 
@@ -26,80 +25,107 @@ bool DUCCDriver::available() const
     return serial.available();
 }
 
-std::unique_ptr<BasePacketRx> DUCCDriver::read() {
-    while (reset) {
-        if (ringBuffer.isEmpty()) {
+std::unique_ptr<BasePacket> DUCCDriver::read()
+{
+    while (reset)
+    {
+        if (ringBuffer.isEmpty())
+        {
             reset = false;
-        } else {
+        }
+        else
+        {
             auto peekByte = ringBuffer.peek();
-            if (peekByte.has_value() && peekByte.value() == START_BYTE) {
+            if (peekByte.has_value() && peekByte.value() == START_BYTE)
+            {
                 packetFound = true;
                 reset = false;
-            } else {
+            }
+            else
+            {
                 ringBuffer.pop();
             }
         }
     }
-    
-    while (serial.available() && !ringBuffer.isFull()){
+
+    while (serial.available() && !ringBuffer.isFull())
+    {
         uint8_t readByte = serial.read();
-        // Serial.print(readByte, HEX);
-        // Serial.print(" ");
-        
-        if (!packetFound && readByte == START_BYTE) {
+#ifdef DEBUG_SERIAL
+        // Serial.print("_");
+        DEBUG_SERIAL.print((char)readByte);
+        DEBUG_SERIAL.print(" ");
+// Serial.print(readByte, HEX);
+#endif
+
+        if (!packetFound && readByte == START_BYTE)
+        {
             packetFound = true;
             ringBuffer.clear();
         }
-        
+
         ringBuffer.push(readByte);
     }
-    
-    if (ringBuffer.size() >= DUCC_HEADER_SIZE && packetFound) {
+
+    if (ringBuffer.isFull() && !packetFound)
+    {
+        ringBuffer.clear();
+    }
+
+    if (ringBuffer.size() >= DUCC_HEADER_SIZE && packetFound)
+    {
         uint8_t header[DUCC_HEADER_SIZE];
-        if (!ringBuffer.copy(header, DUCC_HEADER_SIZE)) {
-            // reset = true;
-            // ringBuffer.pop();
-            // packetFound = false;
-            return nullptr;
-        }
-        
-        uint8_t length = header[1];
-        // Serial.printf("\nLen %d\n", length);
-        if (length > MAX_PAYLOAD_SIZE || length < 2) {
+        if (!ringBuffer.copy(header, DUCC_HEADER_SIZE))
+        {
+            Serial.println("DUCC ERROR: This error should never happen");
             reset = true;
             ringBuffer.pop();
             packetFound = false;
             return nullptr;
         }
-        
-        if (ringBuffer.size() >= length + DUCC_HEADER_SIZE) {
-            uint8_t packet[DUCC_HEADER_SIZE+length];
+
+        uint8_t length = header[1];
+#ifdef DEBUG_SERIAL
+        DEBUG_SERIAL.printf("\nLen %d\n", length);
+#endif
+        if (length > MAX_PAYLOAD_SIZE || length < 2)
+        {
+            reset = true;
+            ringBuffer.pop();
+            packetFound = false;
+            return nullptr;
+        }
+
+        if (ringBuffer.size() >= length + DUCC_HEADER_SIZE)
+        {
+            uint8_t packet[DUCC_HEADER_SIZE + length];
             memcpy(packet, header, DUCC_HEADER_SIZE);
             ringBuffer.erase(DUCC_HEADER_SIZE);
-            if (!ringBuffer.copy(&packet[DUCC_HEADER_SIZE], length)) {
-                // reset = true;
-                // ringBuffer.pop();
-                // packetFound = false;
+            if (!ringBuffer.copy(&packet[DUCC_HEADER_SIZE], length))
+            {
+                Serial.println("DUCC ERROR: This error should never happen");
+                reset = true;
+                ringBuffer.pop();
+                packetFound = false;
                 return nullptr;
             }
-            
-            uint8_t crcPacket = packet[length+1];
+
+            uint8_t crcPacket = packet[length + 1];
             // Calculate CRC: start_byte + len + rssi + snr + payload + crc
             // len = 5 + payload
             // crc is calculated over rssi + snr + payload
-            uint8_t calculatedCrc = calcCRC8(&packet[2], length-1);
-            // Serial.printf("\nCRC: %d/%d\n", crcPacket, calculatedCrc);
-            // for (int i = 0; i < length+3;++i){
-            //     Serial.print(packet[i], HEX);
-            //     Serial.print(" ");
-            // }
-
-            if (calculatedCrc == crcPacket) {
+            uint8_t calculatedCrc = calcCRC8(&packet[2], length - 1);
+#ifdef DEBUG_SERIAL
+            DEBUG_SERIAL.printf("\nCRC: %d/%d\n", crcPacket, calculatedCrc);
+#endif
+            if (calculatedCrc == crcPacket)
+            {
                 ringBuffer.erase(DUCC_HEADER_SIZE + length);
                 return parseHeader(header, &packet[DUCC_HEADER_SIZE]);
-            } else {
+            }
+            else
+            {
                 reset = true;
-                ringBuffer.pop();
                 packetFound = false;
             }
         }
@@ -107,47 +133,51 @@ std::unique_ptr<BasePacketRx> DUCCDriver::read() {
     return nullptr;
 }
 
-std::unique_ptr<BasePacketRx> DUCCDriver::parseHeader(uint8_t* header, uint8_t* data) {
+std::unique_ptr<BasePacket> DUCCDriver::parseHeader(const uint8_t *header, const uint8_t *data)
+{
     uint8_t length = header[1];
-    if (length > MAX_PAYLOAD_SIZE) return nullptr;
-    
-    if (data[5] != getMyAddress()) {
+    if (length > MAX_PAYLOAD_SIZE)
+        return nullptr;
+
+    if (data[5] != getMyAddress())
+    {
         Serial.println("This packet is not for me");
         return nullptr;
     }
 
     uint8_t packetType = data[3];
-    switch (packetType) {
-        case PACKET_TELEMETRY:
-            return std::make_unique<TelemetryPacketRx>(receiveTelemetry(data));
-        case PACKET_RESPONSE:
-            return std::make_unique<ResponsePacketRx>(receiveResponse(data));
-        case PACKET_COMMAND:
-            return std::make_unique<CommandPacketRx>(receiveCommand(data));
-        default:
-            return nullptr;
+    switch (packetType)
+    {
+    case PACKET_TELEMETRY:
+        return std::make_unique<TelemetryPacket>(receiveTelemetry(data));
+    case PACKET_RESPONSE:
+        return std::make_unique<ResponsePacket>(receiveResponse(data));
+    case PACKET_COMMAND:
+        return std::make_unique<CommandPacket>(receiveCommand(data));
+    default:
+        return nullptr;
     }
 }
 
-void DUCCDriver::sendResponse(ResponsePacketTx& packet)
+void DUCCDriver::sendResponse(const ResponsePacket &packet)
 {
     Serial.println("Sending response");
-    uint8_t sys_len = packet.getPayloadLen()+DUCC_HEADER_SIZE+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
+    uint8_t sys_len = packet.getPayloadLen() + DUCC_HEADER_SIZE + DUCC_CRC_SIZE;
     uint8_t buffer[sys_len] = {};
 
     packHeaders(buffer, packet);
 
     // Command Payload
-    memcpy(&buffer[13], &packet.response.commandSeqId, sizeof(uint32_t));
-    memcpy(&buffer[17], &packet.response.data, sizeof(packet.response.data));
+    memcpy(&buffer[16], &packet.response.commandSeqId, sizeof(uint32_t));
+    memcpy(&buffer[20], &packet.response.data, sizeof(packet.response.data));
 
-    buffer[sys_len-1] = calcCRC8(&buffer[2], AVDCP2_HEADER_SIZE+packet.getPayloadLen());
+    buffer[sys_len - 1] = calcCRC8(&buffer[2], packet.getPayloadLen());
     serial.write(buffer, sys_len);
 }
 
-TelemetryPacketRx DUCCDriver::receiveTelemetry(uint8_t *buffer)
+TelemetryPacket DUCCDriver::receiveTelemetry(const uint8_t *buffer)
 {
-    TelemetryPacketRx packet{};
+    TelemetryPacket packet{};
     memcpy(&packet.rssi, &buffer[0], sizeof(int16_t));
     packet.snr = buffer[2];
     packet.sender = buffer[4];
@@ -168,7 +198,15 @@ TelemetryPacketRx DUCCDriver::receiveTelemetry(uint8_t *buffer)
 
     // Parse IMU data
     ImuData imuData{};
-    memcpy(&imuData, &buffer[17], sizeof(ImuData));
+    memcpy(&imuData.yaw, &buffer[17], sizeof(uint16_t));
+    memcpy(&imuData.pitch, &buffer[19], sizeof(uint16_t));
+    memcpy(&imuData.roll, &buffer[21], sizeof(uint16_t));
+    memcpy(&imuData.accel_x, &buffer[23], sizeof(int16_t));
+    memcpy(&imuData.accel_y, &buffer[25], sizeof(int16_t));
+    memcpy(&imuData.accel_z, &buffer[27], sizeof(int16_t));
+    memcpy(&imuData.velocity_x, &buffer[29], sizeof(int16_t));
+    memcpy(&imuData.velocity_y, &buffer[31], sizeof(int16_t));
+    memcpy(&imuData.velocity_z, &buffer[33], sizeof(int16_t));
     // Serial.printf("IMU Data: Yaw=%04X, Pitch=%04X, Roll=%04X, AccelX=%04X, AccelY=%04X, AccelZ=%04X, "
     //               "VelX=%04X, VelY=%04X, VelZ=%04X, PosX=%04X, PosY=%04X, PosZ=%04X\n",
     //               imuData.yaw, imuData.pitch, imuData.roll,
@@ -178,80 +216,65 @@ TelemetryPacketRx DUCCDriver::receiveTelemetry(uint8_t *buffer)
 
     packet.telemetry.imuData = imuData;
 
-    // 4 bytes reserved
-
     // Parse fins
-    // packet.telemetry.fin1 = buffer[45];
-    // packet.telemetry.fin2 = buffer[46];
-    // packet.telemetry.fin3 = buffer[47];
-    // packet.telemetry.fin4 = buffer[48];
-    // // Serial.printf("Fins: [%02X, %02X, %02X, %02X]\n", fin0, fin1, fin2, fin3);
+    packet.telemetry.fin1 = buffer[35];
+    packet.telemetry.fin2 = buffer[36];
+    packet.telemetry.fin3 = buffer[37];
+    packet.telemetry.fin4 = buffer[38];
 
-    // // Parse battery data
-    // uint16_t mvBat, maBat;
-    // memcpy(&mvBat, &buffer[49], sizeof(uint16_t));
-    // memcpy(&maBat, &buffer[51], sizeof(uint16_t));
-    // packet.telemetry.mVBat = mvBat;
-    // packet.telemetry.mABat = maBat;
-    // // Serial.printf("Battery: Voltage=%04X, Current=%04X\n", vBat, currBat);
+    // Parse battery data
+    uint16_t mvBat, maBat;
+    memcpy(&mvBat, &buffer[39], sizeof(uint16_t));
+    memcpy(&maBat, &buffer[41], sizeof(uint16_t));
+    packet.telemetry.mVBat = mvBat;
+    packet.telemetry.mABat = maBat;
 
-    // uint16_t loadCell;
-    // memcpy(&loadCell, &buffer[53], sizeof(uint16_t));
-    // // Serial.printf("LoadCell=%04X\n", loadCell);
-    // packet.telemetry.loadCell = loadCell;
+    uint8_t pyroFlags = buffer[47];
+    uint8_t pyroFlags_ad = buffer[48];
+    // Parse pyro flags
+    int j = 0;
+    packet.telemetry.flags.pyro1_armed = (pyroFlags >> j++) & 0x01;
+    packet.telemetry.flags.pyro1_cont = (pyroFlags >> j++) & 0x01;
+    packet.telemetry.flags.pyro1_fire = (pyroFlags >> j++) & 0x01;
+    packet.telemetry.flags.pyro2_armed = (pyroFlags >> j++) & 0x01;
+    packet.telemetry.flags.pyro2_cont = (pyroFlags >> j++) & 0x01;
+    packet.telemetry.flags.pyro2_fire = (pyroFlags >> j++) & 0x01;
+    packet.telemetry.flags.pyro3_armed = (pyroFlags >> j++) & 0x01;
+    packet.telemetry.flags.pyro3_cont = (pyroFlags >> j++) & 0x01;
+    j = 0;
+    packet.telemetry.flags.pyro3_fire = (pyroFlags_ad >> j++) & 0x01;
+    packet.telemetry.flags.liftoff = (pyroFlags_ad >> j++) & 0x01;
+    packet.telemetry.flags.apogee = (pyroFlags_ad >> j++) & 0x01;
+    packet.telemetry.flags.landed = (pyroFlags_ad >> j++) & 0x01;
+    packet.telemetry.flags.parachute_fired = (pyroFlags_ad >> j++) & 0x01;
+    packet.telemetry.flags.logged_to_sd = (pyroFlags_ad >> j++) & 0x01;
 
-    // // Parse temperature and data
+    // Parse temperature and data
     // packet.telemetry.temp = buffer[55];
     // packet.telemetry.mejPercent = buffer[56];
     // packet.telemetry.cjPercent = buffer[57];
     // packet.telemetry.datajournalPercent = buffer[58];
     // // Serial.printf("Temp=%02X, MEL=%02X, CL=%02X, Datalog=%02X\n", temp, melData, clData, datalogData);
 
-    // // Parse GPS data
-    // int32_t gpsLatitude, gpsLongitude;
-    // int16_t gpsAltitude;
-    // memcpy(&gpsLatitude, &buffer[59], sizeof(int32_t));
-    // memcpy(&gpsLongitude, &buffer[63], sizeof(int32_t));
-    // memcpy(&gpsAltitude, &buffer[67], sizeof(int16_t));
-    // // Serial.printf("GPS: Latitude=%08X, Longitude=%08X, Altitude=%04X\n",
-    // //               gpsLatitude, gpsLongitude, gpsAltitude);
-    // packet.telemetry.gpsLat = gpsLatitude;
-    // packet.telemetry.gpsLon = gpsLongitude;
-    // packet.telemetry.gpsAlt = gpsAltitude;
+    // Parse apogee
+    memcpy(&packet.telemetry.apogee, &buffer[49], sizeof(int16_t));
+
+    // Parse GPS data
+    memcpy(&packet.telemetry.gpsLat, &buffer[51], sizeof(int32_t));
+    memcpy(&packet.telemetry.gpsLon, &buffer[55], sizeof(int32_t));
 
     // // Parse detections
     // uint8_t detections[3];
     // memcpy(detections, &buffer[69], sizeof(detections));
     // Serial.printf("Detections: [%02X, %02X, %02X]\n", detections[0], detections[1], detections[2]);
 
-    // // Parse apogee
-    // int16_t apogee;
-    // memcpy(&apogee, &buffer[72], sizeof(int16_t));
-    // // Serial.printf("Apogee=%04X\n", apogee);
-    // packet.telemetry.apogee = apogee;
-
-    // uint8_t pyroFlags = buffer[82];
-    // uint8_t pyroFlags_ad = buffer[83];
-    // // Parse pyro flags
-    // int j = 0;
-    // packet.telemetry.pyroFlags.pyro1_safe = (pyroFlags >> j++) & 0x01;
-    // packet.telemetry.pyroFlags.pyro1_cont = (pyroFlags >> j++) & 0x01;
-    // packet.telemetry.pyroFlags.pyro1_fire = (pyroFlags >> j++) & 0x01;
-    // packet.telemetry.pyroFlags.pyro2_safe = (pyroFlags >> j++) & 0x01;
-    // packet.telemetry.pyroFlags.pyro2_cont = (pyroFlags >> j++) & 0x01;
-    // packet.telemetry.pyroFlags.pyro2_fire = (pyroFlags >> j++) & 0x01;
-    // packet.telemetry.pyroFlags.pyro3_safe = (pyroFlags >> j++) & 0x01;
-    // packet.telemetry.pyroFlags.pyro3_cont = (pyroFlags >> j++) & 0x01;
-    // j = 0;
-    // packet.telemetry.pyroFlags.pyro3_fire = (pyroFlags_ad >> j++) & 0x01;
-
     Serial.println("Telemetry data parsed successfully.");
     return packet;
 }
 
-ResponsePacketRx DUCCDriver::receiveResponse(uint8_t *buffer)
+ResponsePacket DUCCDriver::receiveResponse(const uint8_t *buffer)
 {
-    ResponsePacketRx packet{};
+    ResponsePacket packet{};
     // Parse header
     memcpy(&packet.rssi, &buffer[0], sizeof(int16_t));
     packet.snr = buffer[2];
@@ -274,9 +297,9 @@ ResponsePacketRx DUCCDriver::receiveResponse(uint8_t *buffer)
     return packet;
 }
 
-CommandPacketRx DUCCDriver::receiveCommand(uint8_t *buffer)
+CommandPacket DUCCDriver::receiveCommand(const uint8_t *buffer)
 {
-    CommandPacketRx packet{};
+    CommandPacket packet{};
     // Parse header
     memcpy(&packet.rssi, &buffer[0], sizeof(int16_t));
     packet.snr = buffer[2];
@@ -286,68 +309,87 @@ CommandPacketRx DUCCDriver::receiveCommand(uint8_t *buffer)
     memcpy(&timestamp, &buffer[6], sizeof(uint32_t));
     packet.timestamp = timestamp;
     uint32_t seq_id;
-    memcpy(&seq_id, &buffer[11], sizeof(uint32_t));
+    memcpy(&seq_id, &buffer[10], sizeof(uint32_t));
     packet.sequenceId = seq_id;
-    packet.command.commandId = static_cast<COMMAND_ID>(buffer[12]);
-    memcpy(&packet.command.args, &buffer[16], sizeof(packet.command.args));
+    packet.command.commandId = static_cast<COMMAND_ID>(buffer[14]);
+    memcpy(&packet.command.args, &buffer[15], sizeof(packet.command.args));
     return packet;
 }
 
-void DUCCDriver::sendCommand(CommandPacketTx& packet)
+void DUCCDriver::sendCommand(const CommandPacket &packet)
 {
-    uint8_t sys_len = packet.getPayloadLen()+DUCC_HEADER_SIZE+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
+    uint8_t sys_len = packet.getPayloadLen() + DUCC_HEADER_SIZE + DUCC_CRC_SIZE;
     uint8_t buffer[sys_len] = {};
 
     packHeaders(buffer, packet);
 
-    buffer[13] = packet.command.commandId;
-    memcpy(&buffer[14], &packet.command.args, sizeof(packet.command.args));
+    buffer[16] = packet.command.commandId;
+    memcpy(&buffer[17], &packet.command.args, sizeof(packet.command.args));
 
-    buffer[sys_len-1] = calcCRC8(&buffer[2], AVDCP2_HEADER_SIZE+packet.getPayloadLen());
+    buffer[sys_len - 1] = calcCRC8(&buffer[2], packet.getPayloadLen());
     serial.write(buffer, sys_len);
+
     Serial.println("Sent Command Packet");
+    Serial.print("SENT:");
+    for (int i = 0; i < sys_len; i++)
+    {
+        Serial.print(buffer[i], HEX);
+        Serial.print(" ");
+    }
+    Serial.println();
 }
 
-void DUCCDriver::packHeaders(uint8_t* buffer, BasePacket& packet)
+void DUCCDriver::packHeaders(uint8_t *buffer, const BasePacket &packet)
 {
     buffer[0] = START_BYTE;
-    buffer[1] = packet.getPayloadLen()+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
-    buffer[2] = packet.getPacketType();;
-    buffer[3] = packet.sender;
-    buffer[4] = packet.receiver;
-    memcpy(&buffer[5], &packet.timestamp, sizeof(uint32_t));
-    memcpy(&buffer[9], &packet.sequenceId, sizeof(uint32_t));
+    buffer[1] = packet.getPayloadLen() + DUCC_CRC_SIZE;
+    memcpy(&buffer[2], &packet.rssi, sizeof(int16_t));
+    buffer[4] = packet.snr;
+    buffer[5] = packet.getPacketType();
+    buffer[6] = packet.sender;
+    buffer[7] = packet.receiver;
+    memcpy(&buffer[8], &packet.timestamp, sizeof(uint32_t));
+    memcpy(&buffer[12], &packet.sequenceId, sizeof(uint32_t));
 }
 
-void DUCCDriver::sendTelemetry(TelemetryPacketTx& packet)
+void DUCCDriver::sendTelemetry(const TelemetryPacket &packet)
 {
-    uint8_t sys_len = packet.getPayloadLen()+DUCC_HEADER_SIZE+AVDCP2_HEADER_SIZE+DUCC_CRC_SIZE;
+    uint8_t sys_len = packet.getPayloadLen() + DUCC_HEADER_SIZE + DUCC_CRC_SIZE;
     uint8_t buffer[sys_len] = {};
 
     packHeaders(buffer, packet);
 
     // Payload:
     // Flight State (1 byte)
-    buffer[13] = packet.telemetry.flightState;
+    buffer[16] = packet.telemetry.flightState;
 
     // Barometric altitude (2 bytes)
-    memcpy(&buffer[14], &packet.telemetry.barometricAlt, sizeof(int16_t));
+    memcpy(&buffer[17], &packet.telemetry.barometricAlt, sizeof(int16_t));
 
     // IMU Data (12 bytes)
-    memcpy(&buffer[16], &packet.telemetry.imuData, sizeof(ImuData));
+    memcpy(&buffer[19], &packet.telemetry.imuData.yaw, sizeof(int16_t));
+    memcpy(&buffer[21], &packet.telemetry.imuData.pitch, sizeof(int16_t));
+    memcpy(&buffer[23], &packet.telemetry.imuData.roll, sizeof(int16_t));
+
+    memcpy(&buffer[25], &packet.telemetry.imuData.accel_x, sizeof(int16_t));
+    memcpy(&buffer[27], &packet.telemetry.imuData.accel_y, sizeof(int16_t));
+    memcpy(&buffer[29], &packet.telemetry.imuData.accel_z, sizeof(int16_t));
+
+    memcpy(&buffer[31], &packet.telemetry.imuData.velocity_x, sizeof(int16_t));
+    memcpy(&buffer[33], &packet.telemetry.imuData.velocity_y, sizeof(int16_t));
+    memcpy(&buffer[35], &packet.telemetry.imuData.velocity_z, sizeof(int16_t));
 
     // Fins (4 bytes)
-    // buffer[44] = packet.telemetry.fin1;
-    // buffer[45] = packet.telemetry.fin2;
-    // buffer[46] = packet.telemetry.fin3;
-    // buffer[47] = packet.telemetry.fin4;
+    buffer[37] = packet.telemetry.fin1;
+    buffer[38] = packet.telemetry.fin2;
+    buffer[39] = packet.telemetry.fin3;
+    buffer[40] = packet.telemetry.fin4;
 
     // // Battery data (4 bytes)
-    // memcpy(&buffer[48], &packet.telemetry.mVBat, sizeof(uint16_t));  // mVBat
-    // memcpy(&buffer[50], &packet.telemetry.mABat, sizeof(uint16_t));  // mABat
+    memcpy(&buffer[41], &packet.telemetry.mVBat, sizeof(uint16_t)); // mVBat
+    memcpy(&buffer[43], &packet.telemetry.mABat, sizeof(uint16_t)); // mABat
 
-    // // Load cell (2 bytes)
-    // memcpy(&buffer[52], &packet.telemetry.loadCell, sizeof(uint16_t));
+    memcpy(&buffer[47], &packet.telemetry.takeoffDetectedTime, sizeof(uint16_t));
 
     // // Temperature and additional data (4 bytes)
     // buffer[54] = packet.telemetry.temp;
@@ -355,9 +397,39 @@ void DUCCDriver::sendTelemetry(TelemetryPacketTx& packet)
     // buffer[56] = packet.telemetry.cjPercent;
     // buffer[57] = packet.telemetry.datajournalPercent;
 
-    // // GPS data (12 bytes)
-    // memcpy(&buffer[58], &packet.telemetry.gpsLat, sizeof(int32_t));
-    // memcpy(&buffer[62], &packet.telemetry.gpsLon, sizeof(int32_t));
+    // Pyro flags (2 bytes)
+    uint8_t pyroFlags = 0;
+    pyroFlags |= (packet.telemetry.flags.pyro1_armed << 0);
+    pyroFlags |= (packet.telemetry.flags.pyro1_cont << 1);
+    pyroFlags |= (packet.telemetry.flags.pyro1_fire << 2);
+    pyroFlags |= (packet.telemetry.flags.pyro2_armed << 3);
+    pyroFlags |= (packet.telemetry.flags.pyro2_cont << 4);
+    pyroFlags |= (packet.telemetry.flags.pyro2_fire << 5);
+    pyroFlags |= (packet.telemetry.flags.pyro3_armed << 6);
+    pyroFlags |= (packet.telemetry.flags.pyro3_cont << 7);
+    buffer[49] = pyroFlags;
+
+    uint8_t pyroFlagsAd = 0;
+    pyroFlagsAd |= (packet.telemetry.flags.pyro3_fire << 0);
+    pyroFlagsAd |= (packet.telemetry.flags.liftoff << 1);
+    pyroFlagsAd |= (packet.telemetry.flags.apogee << 2);
+    pyroFlagsAd |= (packet.telemetry.flags.landed << 3);
+    pyroFlagsAd |= (packet.telemetry.flags.parachute_fired << 4);
+    pyroFlagsAd |= (packet.telemetry.flags.logged_to_sd << 5);
+    buffer[50] = pyroFlagsAd;
+
+    // Apogee (2 bytes)
+    memcpy(&buffer[51], &packet.telemetry.apogee, sizeof(int16_t));
+
+    // GPS data (12 bytes)
+    memcpy(&buffer[53], &packet.telemetry.gpsLat, sizeof(int32_t));
+    memcpy(&buffer[57], &packet.telemetry.gpsLon, sizeof(int32_t));
+
+    memcpy(&buffer[61], &packet.telemetry.yaw_setp, sizeof(int16_t));
+    memcpy(&buffer[65], &packet.telemetry.pitch_setp, sizeof(int16_t));
+    memcpy(&buffer[69], &packet.telemetry.roll_setp, sizeof(int16_t));
+    memcpy(&buffer[71], &packet.telemetry.parachuteDeploymentTime, sizeof(uint16_t));
+    memcpy(&buffer[73], &packet.telemetry.event2_time, sizeof(uint16_t));
     // memcpy(&buffer[66], &packet.telemetry.gpsAlt, sizeof(int16_t));
 
     // // Detections (3 bytes)
@@ -365,32 +437,15 @@ void DUCCDriver::sendTelemetry(TelemetryPacketTx& packet)
     // buffer[69] = packet.telemetry.apogeeDetection;
     // buffer[70] = packet.telemetry.landingDetection;
 
-    // // Apogee (2 bytes)
-    // memcpy(&buffer[71], &packet.telemetry.apogee, sizeof(int16_t));
+    buffer[sys_len - 1] = calcCRC8(&buffer[2], packet.getPayloadLen());
 
-    // // Pyro flags (2 bytes)
-    // uint8_t pyroFlags = 0;
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro1_safe << 0);
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro1_cont << 1);
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro1_fire << 2);
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro2_safe << 3);
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro2_cont << 4);
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro2_fire << 5);
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro3_safe << 6);
-    // pyroFlags |= (packet.telemetry.pyroFlags.pyro3_cont << 7);
-    // buffer[81] = pyroFlags;
-
-    // uint8_t pyroFlagsAd = 0;
-    // pyroFlagsAd |= (packet.telemetry.pyroFlags.pyro3_fire << 0);
-    // buffer[82] = pyroFlagsAd;
-
-    // Serial.println(":::");
-    // for (int i = 0; i < TELEMETRY_SIZE+2; i++) {
+    // Serial.print("TEENSY-SENDING:::");
+    // for (int i = 0; i < sys_len; i++)
+    // {
     //     Serial.print(buffer[i], HEX);
     //     Serial.print(" ");
     // }
     // Serial.println();
 
-    buffer[sys_len-1] = calcCRC8(&buffer[2], AVDCP2_HEADER_SIZE+packet.getPayloadLen());
     serial.write(buffer, sys_len);
 }

@@ -1,12 +1,11 @@
 #include "imu.h"
 
-
 void IMU::setup()
 {
   // assume that Wire.begin() is already executed
   Wire.beginTransmission(0x68);
-  Wire.write(0x6B);  // PWR_MGMT_1 register
-  Wire.write(0);     // Wake up MPU6050
+  Wire.write(0x6B); // PWR_MGMT_1 register
+  Wire.write(0);    // Wake up MPU6050
   Wire.endTransmission();
 
   // low pass filter
@@ -27,11 +26,8 @@ void IMU::setup()
   Wire.write(0x8);
   Wire.endTransmission();
 
-
   calibrate();
-
 }
-
 
 // currently prints roll, pitch, yaw
 void IMU::printGyroData()
@@ -71,7 +67,6 @@ void IMU::printScaledAccelData()
   Serial.println("");
 }
 
-
 float IMU::getRollRate()
 {
   return rollRate_;
@@ -102,15 +97,18 @@ float IMU::getAngleYaw() /// TODO: Get yaw
   return angleYaw_;
 }
 
-float IMU::getAccelX() {
+float IMU::getAccelX()
+{
   return accX_cal_;
 }
 
-float IMU::getAccelY() {
+float IMU::getAccelY()
+{
   return accY_cal_;
 }
 
-float IMU::getAccelZ() {
+float IMU::getAccelZ()
+{
   return accZ_cal_;
 }
 
@@ -121,7 +119,6 @@ void IMU::calibrate()
   calibrateGyro();
   // calibrateAccel(0.0, 0.0, 0.0);
   calibrateAccel(0.052074, -0.026193, -0.223160);
-
 }
 
 void IMU::calibrateGyro()
@@ -129,7 +126,8 @@ void IMU::calibrateGyro()
   float tempRollCalibration_ = 0;
   float tempPitchCalibration_ = 0;
   float tempYawCalibration_ = 0;
-  for (size_t i = 0; i < 2000; ++i) {
+  for (size_t i = 0; i < 2000; ++i)
+  {
 
     updateGyro();
     // Serial.println(rollRate_);
@@ -139,12 +137,10 @@ void IMU::calibrateGyro()
     delay(1);
   }
 
-  rollCalibration_ = tempRollCalibration_/2000;
-  pitchCalibration_ = tempPitchCalibration_/2000;
-  yawCalibration_ = tempYawCalibration_/2000;
-
+  rollCalibration_ = tempRollCalibration_ / 2000;
+  pitchCalibration_ = tempPitchCalibration_ / 2000;
+  yawCalibration_ = tempYawCalibration_ / 2000;
 }
-
 
 // highly recommended to adjust for yourself
 void IMU::calibrateAccel(float xc, float yc, float zc)
@@ -158,7 +154,8 @@ void IMU::update()
 {
   updateAccel();
   updateGyro();
-  if (!takeoffDetected) {
+  if (enableTakeoffDetection_ && !takeoffDetected)
+  {
     detectTakeoff();
   }
 }
@@ -180,19 +177,61 @@ void IMU::updateAccel()
   accY_ = static_cast<float>(AccYLBS) / 4096.0 - accYCalibration_;
   accZ_ = static_cast<float>(AccZLBS) / 4096.0 - accZCalibration_;
 
+#ifdef HITL_MODE
+  if (hitl)
+  {
+    if (start_time == 0)
+    {
+      start_time = millis() + 800;
+    }
+    time_now = millis();
+    if (time_now > start_time)
+    {
+      double time = time_now - start_time;
+      if (time <= motor_duration)
+      {
+        accX_cal_ = 5; // max_accel / ((motor_duration / time) *(motor_duration / time));
+      }
+      else if (time <= climb_duration)
+      {
+        double incline_time = time + motor_duration;
+        accX_cal_ = max_accel * sqrt(climb_duration / incline_time);
+      }
+      else if (time <= decline_duration)
+      {
+        double decline_time = time - climb_duration;
+        accX_cal_ = -5; //-max_accel * sqrt(decline_duration / decline_time);
+      }
+      else
+      {
+        accX_cal_ = 0;
+      }
+    }
+  }
+  else
+  {
+    accX_cal_ = 1.003195 * accX_ + 0.001268 * accY_ + 0.001367 * accZ_;
+    accY_cal_ = 0.001268 * accX_ + 0.993899 * accY_ - 0.000891 * accZ_;
+    accZ_cal_ = 0.001367 * accX_ - 0.000891 * accY_ + 0.977694 * accZ_;
+
+    anglePitch_ = 180 * atan2(accX_cal_, sqrt(accY_cal_ * accY_cal_ + accZ_cal_ * accZ_cal_)) / PI;
+    angleRoll_ = 180 * atan2(accY_cal_, sqrt(accX_cal_ * accX_cal_ + accZ_cal_ * accZ_cal_)) / PI;
+  }
+#else
   accX_cal_ = 1.003195 * accX_ + 0.001268 * accY_ + 0.001367 * accZ_;
   accY_cal_ = 0.001268 * accX_ + 0.993899 * accY_ - 0.000891 * accZ_;
   accZ_cal_ = 0.001367 * accX_ - 0.000891 * accY_ + 0.977694 * accZ_;
 
-  anglePitch_ = 180 * atan2(accX_cal_, sqrt(accY_cal_*accY_cal_ + accZ_cal_*accZ_cal_))/PI;
-  angleRoll_ = 180 * atan2(accY_cal_, sqrt(accX_cal_*accX_cal_ + accZ_cal_*accZ_cal_))/PI;
-
+  anglePitch_ = 180 * atan2(accX_cal_, sqrt(accY_cal_ * accY_cal_ + accZ_cal_ * accZ_cal_)) / PI;
+  angleRoll_ = 180 * atan2(accY_cal_, sqrt(accX_cal_ * accX_cal_ + accZ_cal_ * accZ_cal_)) / PI;
+#endif
   // Integrate acceleration to get velocity
   unsigned long currentTime = millis();
   // Delta time in seconds
-  float deltaTime = (currentTime - lastTime_) / 1000.0; 
+  float deltaTime = (currentTime - lastTime_) / 1000.0;
 
-  if (deltaTime > 0) {
+  if (deltaTime > 0)
+  {
     velX_ += accX_cal_ * deltaTime;
     velY_ += accY_cal_ * deltaTime;
     velZ_ += accZ_cal_ * deltaTime;
@@ -206,30 +245,35 @@ void IMU::updateAccel()
   lastTime_ = currentTime;
 }
 
-float IMU::getVelX() {
+float IMU::getVelX()
+{
   return velX_;
 }
 
-float IMU::getVelY() {
+float IMU::getVelY()
+{
   return velY_;
 }
 
-float IMU::getVelZ() {
+float IMU::getVelZ()
+{
   return velZ_;
 }
 
-float IMU::getPosX() {
+float IMU::getPosX()
+{
   return posX_;
 }
 
-float IMU::getPosY() {
+float IMU::getPosY()
+{
   return posY_;
 }
 
-float IMU::getPosZ() {
+float IMU::getPosZ()
+{
   return posZ_;
 }
-
 
 void IMU::updateGyro()
 {
@@ -243,45 +287,49 @@ void IMU::updateGyro()
   int16_t GyroY = Wire.read() << 8 | Wire.read();
   int16_t GyroZ = Wire.read() << 8 | Wire.read();
 
-  rollRate_ = static_cast<float>(GyroX) / 65.5 - rollCalibration_; 
+  rollRate_ = static_cast<float>(GyroX) / 65.5 - rollCalibration_;
   pitchRate_ = static_cast<float>(GyroY) / 65.5 - pitchCalibration_;
   yawRate_ = static_cast<float>(GyroZ) / 65.5 - yawCalibration_;
 }
 
-void IMU::detectTakeoff() {
-  bool takeOffaccelConditions = abs(accX_cal_) > accelThreshold || 
-                    abs(accY_cal_) > accelThreshold || 
-                    abs(accZ_cal_) > accelThreshold;
-  
-  bool takeOffgyroConditions = abs(rollRate_) > gyroThreshold ||
-                    abs(pitchRate_) > gyroThreshold ||
-                    abs(yawRate_) > gyroThreshold;
+void IMU::detectTakeoff()
+{
+  bool takeOffaccelConditions = abs(accX_cal_) > accelThreshold ||
+                                abs(accY_cal_ + 0.98) > accelThreshold ||
+                                abs(accZ_cal_) > accelThreshold;
 
-  if (takeOffaccelConditions) {
+  bool takeOffgyroConditions = abs(rollRate_) > gyroThreshold ||
+                               abs(pitchRate_) > gyroThreshold ||
+                               abs(yawRate_) > gyroThreshold;
+
+  if (takeOffaccelConditions)
+  {
     takeoffDetected = true;
   }
 }
 
+void IMU::detectLanding()
+{
 
-void IMU::detectLanding() {
+  bool landingAccelConditions = abs(accX_cal_) < accelThreshold &&
+                                abs(accY_cal_) < accelThreshold &&
+                                abs(accZ_cal_) < accelThreshold;
 
-  bool landingAccelConditions = abs(accX_cal_) < accelThreshold && 
-                         abs(accY_cal_) < accelThreshold && 
-                         abs(accZ_cal_) < accelThreshold;
+  bool landingGyroConditions = abs(rollRate_) < gyroThreshold &&
+                               abs(pitchRate_) < gyroThreshold &&
+                               abs(yawRate_) < gyroThreshold;
 
-  bool landingGyroConditions = abs(rollRate_) < gyroThreshold && 
-                        abs(pitchRate_) < gyroThreshold && 
-                        abs(yawRate_) < gyroThreshold;
-
-  if (landingAccelConditions && landingGyroConditions) {
+  if (landingAccelConditions && landingGyroConditions)
+  {
     successCount++;
-  } else {
+  }
+  else
+  {
     successCount = 0;
   }
 
-  if (successCount >= requiredChecks) {
+  if (successCount >= requiredChecks)
+  {
     landingDetected = true;
   }
 }
-
-

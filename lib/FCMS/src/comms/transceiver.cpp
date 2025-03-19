@@ -5,10 +5,10 @@ void Transceiver::setup()
     ducc_.setup();
 }
 
-void Transceiver::sendTelemetry(uint8_t receiver, Telemetry telemetry)
+void Transceiver::sendTelemetry(uint8_t receiver, const Telemetry& telemetry)
 {
     // send telemetry
-    TelemetryPacketTx packet;
+    TelemetryPacket packet;
     packet.sender = ducc_.getMyAddress();
     packet.receiver = receiver;
     packet.timestamp = millis();
@@ -17,9 +17,9 @@ void Transceiver::sendTelemetry(uint8_t receiver, Telemetry telemetry)
     ducc_.sendTelemetry(packet);
 }
 
-void Transceiver::sendResponse(uint8_t receiver, Response response)
+void Transceiver::sendResponse(uint8_t receiver, const Response& response)
 {
-    ResponsePacketTx packet;
+    ResponsePacket packet;
     packet.sender = ducc_.getMyAddress();
     packet.receiver = receiver;
     packet.timestamp = millis();
@@ -29,18 +29,22 @@ void Transceiver::sendResponse(uint8_t receiver, Response response)
     ducc_.sendResponse(packet);
 }
 
-void Transceiver::retryCommands(){
-
-    for (auto& [seqId, packet] : unrespondedCommands){
-        if (commandRetries[seqId] >= MAX_RETRIES){
+void Transceiver::retryCommands()
+{
+    for (auto &[seqId, packet] : unrespondedCommands)
+    {
+        if (commandRetries[seqId] >= MAX_RETRIES)
+        {
             Serial.printf("Command %d retries exceeded\n", seqId);
             unrespondedCommands.erase(seqId);
             commandRetries.erase(seqId);
+            sentCommands.erase(seqId);
             continue;
         }
 
         auto time = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(time - sentCommands[seqId]).count() > TIMEOUT_MS){
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(time - sentCommands[seqId]).count() > TIMEOUT_MS)
+        {
             packet.timestamp = millis();
             ducc_.sendCommand(packet);
             commandRetries[seqId]++;
@@ -51,43 +55,52 @@ void Transceiver::retryCommands(){
 
 void Transceiver::receive()
 {
-    if (!ducc_.available()){
+    if (!ducc_.available())
+    {
         return;
     }
+    Serial.println("SERVER AVAILABLE");
 
     auto packet_ptr = ducc_.read();
-    if (!packet_ptr) return;
+    if (!packet_ptr)
+        return;
 
     auto type = packet_ptr->getPacketType();
-    switch (type) {
-        case PACKET_TELEMETRY:
-            receivedTelemetry.push(static_cast<TelemetryPacketRx&>(*packet_ptr));
-            break;
-        case PACKET_COMMAND:
-            receivedCommands.push(static_cast<CommandPacketRx&>(*packet_ptr));
-            break;
-        case PACKET_RESPONSE:{
-            auto packet = static_cast<ResponsePacketRx&>(*packet_ptr);
-            receivedResponses.push(packet);
+    switch (type)
+    {
+    case PACKET_TELEMETRY:
+        receivedTelemetry.push(static_cast<TelemetryPacket &>(*packet_ptr));
+        break;
+    case PACKET_COMMAND:
+        Serial.println("Received command :)");
+        receivedCommands.push(static_cast<CommandPacket &>(*packet_ptr));
+        break;
+    case PACKET_RESPONSE:
+    {
+        auto packet = static_cast<ResponsePacket &>(*packet_ptr);
+        receivedResponses.push(packet);
 
-            if (unrespondedCommands.find(packet.sequenceId) != unrespondedCommands.end()) {
-                unrespondedCommands.erase(packet.sequenceId);
-                commandRetries.erase(packet.sequenceId);
-                sentCommands.erase(packet.sequenceId);
-            } else {
-                Serial.printf("Unexpected response for command %d\n", packet.sequenceId);
-            }
-            break;
+        if (unrespondedCommands.find(packet.response.commandSeqId) != unrespondedCommands.end())
+        {
+            unrespondedCommands.erase(packet.response.commandSeqId);
+            commandRetries.erase(packet.response.commandSeqId);
+            sentCommands.erase(packet.response.commandSeqId);
         }
-        default:
-            Serial.println("Unknown packet type received.");
-            break;
+        else
+        {
+            Serial.printf("Unexpected response for command %d\n", packet.response.commandSeqId);
+        }
+        break;
+    }
+    default:
+        Serial.println("Unknown packet type received.");
+        break;
     }
 }
 
-void Transceiver::sendCommand(uint8_t receiver, Command command)
+void Transceiver::sendCommand(uint8_t receiver, const Command& command)
 {
-    CommandPacketTx packet;
+    CommandPacket packet;
     packet.sender = ducc_.getMyAddress();
     packet.receiver = receiver;
     packet.timestamp = millis();
@@ -97,9 +110,9 @@ void Transceiver::sendCommand(uint8_t receiver, Command command)
     uint32_t seqId = packet.sequenceId;
 
     ducc_.sendCommand(packet);
-    sentCommands[seqId] = std::chrono::steady_clock::now();
-    unrespondedCommands[seqId] = packet;
-    commandRetries[seqId] = 0;
+    sentCommands.emplace(seqId, std::chrono::steady_clock::now());
+    unrespondedCommands.emplace(seqId, packet);
+    commandRetries.emplace(seqId, 0);
 
-    Serial.printf("Command %d sent to %d\n", command.commandId, receiver);
+    Serial.printf("Command %d sent to %d\n", seqId, receiver);
 }
