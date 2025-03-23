@@ -1,3 +1,6 @@
+#ifndef TRANSCEIVER_H
+#define TRANSCEIVER_H
+
 #include <iostream>
 #include <iomanip>
 #include <map>
@@ -10,19 +13,15 @@ class Transceiver
 {
 public:
     Transceiver(Stream &serial, uint8_t myAddr, size_t tel_queue_size = 10, size_t com_queue_size = 10, size_t resp_queue_size = 10)
-        : ducc_(serial, myAddr), receivedTelemetry(tel_queue_size), receivedCommands(com_queue_size), receivedResponses(resp_queue_size)
-    {
-        // serial.begin(9600);
-    };
-    // Transceiver(SoftwareSerial &serial, uint8_t myAddr) : ducc_(serial, myAddr) { serial.begin(9600); };
+        : ducc_(serial, myAddr), receivedTelemetry(tel_queue_size), receivedCommands(com_queue_size), receivedResponses(resp_queue_size) {};
 
     void setup();
 
     void receive();
     void retryCommands();
-    void sendCommand(uint8_t receiver, const Command& packet);
-    void sendTelemetry(uint8_t receiver, const Telemetry& telemetry);
-    void sendResponse(uint8_t receiver, const Response& response);
+    void sendCommand(uint8_t receiver, const Command &packet);
+    void sendTelemetry(uint8_t receiver, const Telemetry &telemetry);
+    void sendResponse(uint8_t receiver, const Response &response);
 
     uint32_t getMyAddress() const { return ducc_.getMyAddress(); }
 
@@ -49,3 +48,5 @@ private:
     static const uint32_t MAX_RETRIES = 100;
     static const uint32_t TIMEOUT_MS = 5000;
 };
+
+#endif

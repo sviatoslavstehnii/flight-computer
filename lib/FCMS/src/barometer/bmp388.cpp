@@ -1,21 +1,64 @@
 #include "bmp388.h"
 
-void BMP388::setup()
+bool BMP388::setup()
 {
   bmp_.begin();
   bmp_.setTimeStandby(TIME_STANDBY_1280MS);
   bmp_.startNormalConversion();
 
-  calibrate();
+  return calibrate();
 }
 
 void BMP388::update()
 {
+#ifdef HITL_MODE
+  if (hitl)
+  {
+    if (start_time == 0)
+    {
+      start_time = millis() + 1000;
+    }
+
+    time_now = millis();
+
+    if (time_now > start_time)
+    {
+      double time = (time_now - start_time) / 1000.0;
+      double decline_time = time - climb_duration;
+
+      if (time <= climb_duration)
+      {
+        altitude_ = max_alt * (time / climb_duration) * (time / climb_duration);
+      }
+      else if (decline_time <= decline_duration)
+      {
+        double descent_progress = decline_time / decline_duration;
+        altitude_ = max_alt * (1 - descent_progress * descent_progress);
+      }
+      else
+      {
+        altitude_ = 0;
+      }
+
+      Serial.print("Time: ");
+      Serial.print(time);
+      Serial.print(" | Altitude: ");
+      Serial.println(altitude_);
+    }
+  }
+  else
+  {
+    bmp_.getAltitude(altitude_);
+    altitude_ = altitude_ - altitudeCalibration_;
+  }
+#else
   bmp_.getAltitude(altitude_);
+  altitude_ = altitude_ - altitudeCalibration_;
+#endif
   detectApogee();
 }
 
-void BMP388::calibrate()
+bool BMP388::calibrate()
 {
   Serial.print("Calibrating BMP388...");
   size_t n = 0;
@@ -40,13 +83,16 @@ void BMP388::calibrate()
   if (n > 0)
   {
     altitudeCalibration_ = sum / n;
-    Serial.print("Calibrated altitude: ");
+    Serial.print("Calibrated coefficient: ");
     Serial.println(altitudeCalibration_);
   }
   else
   {
     Serial.println("Calibration failed.");
+    return false;
   }
+
+  return altitudeCalibration_ > 100 && altitudeCalibration_ < 500;
 }
 
 void BMP388::printAltitude()
@@ -58,39 +104,7 @@ void BMP388::printAltitude()
 
 float BMP388::getAltitude()
 {
-  update();
-
-#ifdef HITL_MODE
-  if (hitl)
-  {
-    if (start_time == 0)
-    {
-      start_time = millis() + 1000;
-    }
-    time_now = millis();
-    if (time_now > start_time)
-    {
-      double time = time_now - start_time;
-      double decline_time = time - climb_duration;
-
-      if (time <= climb_duration)
-      {
-        altitude_ = max_alt / sqrt(climb_duration / time);
-      }
-      else if (decline_time <= decline_duration)
-      {
-        altitude_ = max_alt * sqrt(decline_duration / decline_time);
-      }
-      else
-      {
-        altitude_ = 0;
-      }
-    }
-  }
   return altitude_;
-#endif
-
-  return altitude_ - altitudeCalibration_;
 }
 
 void BMP388::detectApogee()
@@ -101,15 +115,17 @@ void BMP388::detectApogee()
   {
     maxapogee = altitude_;
   }
-  if (altitude_ > minApogeeAlt && altitude_ < maxapogee - minDropThreshold && climbing)
+  if (altitude_ > minApogeeAlt && (altitude_ + minDropThreshold < maxapogee) && climbing)
   {
     apogeeDetected = true;
-    Serial.println(maxapogee);
+    Serial.printf("388 Apogee detected: %f\n", altitude_);
+    Serial.printf("Max apogee: %f\n", maxapogee);
+    Serial.printf("Last apogee: %f\n", lastAltitude);
     climbing = false;
   }
-  else if (altitude_ > lastAltitude + minDropThreshold)
-  {
-    climbing = true;
-  }
+  // else if (altitude_ > lastAltitude + minDropThreshold)
+  // {
+  //   climbing = true;
+  // }
   lastAltitude = altitude_;
 }

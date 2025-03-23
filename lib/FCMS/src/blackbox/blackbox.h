@@ -1,8 +1,10 @@
+#ifndef BLACKBOX_H
+#define BLACKBOX_H
+
 #include <SD.h>
 #include "../comms/transceiver.h"
 
-// Secure Digital Memory Card (SD)
-class SDMC
+class Blackbox
 {
 private:
   const int chipSelect = 17;
@@ -12,13 +14,13 @@ private:
   Transceiver logger{LOG, 0xCC};
 
 public:
-  SDMC() = default;
-  ~SDMC() = default;
+  Blackbox() = default;
+  ~Blackbox() = default;
 
-  SDMC(const SDMC &) = delete;
-  SDMC &operator=(const SDMC &) = delete;
+  Blackbox(const Blackbox &) = delete;
+  Blackbox &operator=(const Blackbox &) = delete;
 
-  void setup();
+  bool setup();
 
   bool write(const char *filename, const char *text);
   bool read(const char *filename);
@@ -29,3 +31,5 @@ public:
   bool writeLOG(const uint8_t *buf, size_t len);
   void closeLOG();
 };
+
+#endif

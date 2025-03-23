@@ -8,9 +8,10 @@
 
 #include "flash/flash.h"
 #include "gps/gps.h"
-#include "sdmc/sdmc.h"
+#include "blackbox/blackbox.h"
 #include "ina/ina.h"
 #include "buzzer/buzzer.h"
+#include "comms/sim7600.h"
 // #include "comms/transceiver.h"
 #include "flight_events.h"
 #include <Servo.h>
@@ -70,6 +71,7 @@ enum CURRENT_MODE
 class FCMS
 {
 private:
+  bool initialization_error = false;
   PyroDriver cameras{PYRO_ONE_PIN};     // Bottom, next to LORA
   PyroDriver parachute{PYRO_THREE_PIN}; // Top, next to USB
   IMU imu_{};
@@ -79,11 +81,12 @@ private:
   BMP280 baro_{};
   BMP388 baro388_{};
   Flash flash_;
-  SDMC sdmc_{};
+  Blackbox sdmc_{};
   GPS gps_{};
   Buzzer buzzer{BUZZER_PIN};
-  Transceiver transceiver{Serial3, VEHICLE_ADDR};
-  Transceiver server{Serial2, VEHICLE_ADDR};
+  // Transceiver transceiver{Serial3, VEHICLE_ADDR};
+  SIM7600 transceiver{Serial2, VEHICLE_ADDR};
+  // Transceiver server{Serial3, VEHICLE_ADDR};
   FlightEvents events{};
 #ifdef ZEST_CHIP
   CRGB main_led[1];
@@ -105,7 +108,7 @@ private:
   struct Fins
   {
     int fin1, fin2, fin3, fin4;
-    int fin1_offset = -4, fin2_offset = -1, fin3_offset = -9, fin4_offset = 24;
+    int fin1_offset = 0, fin2_offset = 0, fin3_offset = 0, fin4_offset = 0;
     float roll_start = 0, pitch_start = 0, yaw_start = 0;
     float roll_setp = 0, pitch_setp = 0, yaw_setp = 0;
   } fins;
@@ -125,7 +128,7 @@ private:
   uint32_t commitInterval = 100;
 
   uint32_t commsMillis = 0;
-  uint32_t commsInterval = 50;
+  uint32_t commsInterval = 100;
 
   uint32_t monitorMillis = 0;
   uint32_t monitorInterval = 400;

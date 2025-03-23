@@ -1,11 +1,12 @@
 #include "bmp280.h"
 
-void BMP280::setup()
+bool BMP280::setup()
 {
   if (!bmp_.begin(0x76))
   {
     Serial.println(F("Could not find a valid BMP280 sensor, check wiring or "
                      "try a different address!"));
+    return false;
     // while (1) delay(10);
   }
 
@@ -16,7 +17,7 @@ void BMP280::setup()
                    Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                    Adafruit_BMP280::STANDBY_MS_500); /* Standby time. */
 
-  calibrate();
+  return calibrate();
 }
 
 void BMP280::update()
@@ -28,7 +29,7 @@ void BMP280::update()
   }
 }
 
-void BMP280::calibrate()
+bool BMP280::calibrate()
 {
   Serial.print("Calibrating BMP280...");
   size_t n = 0;
@@ -61,6 +62,8 @@ void BMP280::calibrate()
   {
     Serial.println("Calibration failed.");
   }
+
+  return altitudeCalibration_ > 100 && altitudeCalibration_ < 500;
 }
 
 void BMP280::printAltitude()
@@ -83,19 +86,22 @@ float BMP280::getAltitude()
     {
       start_time = millis() + 1000;
     }
+
     time_now = millis();
+
     if (time_now > start_time)
     {
-      double time = time_now - start_time;
+      double time = (time_now - start_time) / 1000.0;
       double decline_time = time - climb_duration;
 
       if (time <= climb_duration)
       {
-        altitude_ = max_alt / sqrt(climb_duration / time);
+        altitude_ = max_alt * (time / climb_duration) * (time / climb_duration);
       }
       else if (decline_time <= decline_duration)
       {
-        altitude_ = max_alt * sqrt(decline_duration / decline_time);
+        double descent_progress = decline_time / decline_duration;
+        altitude_ = max_alt * (1 - descent_progress * descent_progress);
       }
       else
       {

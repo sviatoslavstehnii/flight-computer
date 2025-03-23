@@ -59,7 +59,7 @@ public:
   IMU(const IMU &) = delete;
   IMU &operator=(const IMU &) = delete;
 
-  void setup();
+  bool setup();
   void calibrate();
 
   void update();

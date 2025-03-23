@@ -248,6 +248,7 @@ TelemetryPacket DUCCDriver::receiveTelemetry(const uint8_t *buffer)
     packet.telemetry.flags.landed = (pyroFlags_ad >> j++) & 0x01;
     packet.telemetry.flags.parachute_fired = (pyroFlags_ad >> j++) & 0x01;
     packet.telemetry.flags.logged_to_sd = (pyroFlags_ad >> j++) & 0x01;
+    packet.telemetry.flags.critical = (pyroFlags_ad >> j++) & 0x01;
 
     // Parse temperature and data
     // packet.telemetry.temp = buffer[55];
@@ -416,6 +417,7 @@ void DUCCDriver::sendTelemetry(const TelemetryPacket &packet)
     pyroFlagsAd |= (packet.telemetry.flags.landed << 3);
     pyroFlagsAd |= (packet.telemetry.flags.parachute_fired << 4);
     pyroFlagsAd |= (packet.telemetry.flags.logged_to_sd << 5);
+    pyroFlagsAd |= (packet.telemetry.flags.critical << 6);
     buffer[50] = pyroFlagsAd;
 
     // Apogee (2 bytes)

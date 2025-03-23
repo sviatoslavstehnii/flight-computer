@@ -103,7 +103,7 @@ void FCMS::testFins()
 
 void FCMS::setup()
 {
-  Serial2.begin(9600);
+  Serial2.begin(115200);
 #ifdef ZEST_CHIP
   FastLED.addLeds<WS2812, LED_DATA_PIN, GRB>(main_led, 1).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(LED_BRIGHTNESS);
@@ -113,12 +113,7 @@ void FCMS::setup()
   pinMode(LED_GREEN_PIN, OUTPUT);
   pinMode(LED_BLUE_PIN, OUTPUT);
 #endif
-  setColor(0, 255, 200); // blue
-
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(100);
-  digitalWrite(BUZZER_PIN, LOW);
+  setColor(0, 255, 255); // light blue
   cameras.disarm();
   parachute.disarm();
 
@@ -129,23 +124,32 @@ void FCMS::setup()
     buzzer.update(millis());
   }
 
+  // delay(1000);
+  Serial.println("Set up FCMS");
+
   fin1_servo.attach(FIN1_PIN);
   fin2_servo.attach(FIN2_PIN);
   fin3_servo.attach(FIN3_PIN);
   fin4_servo.attach(FIN4_PIN);
+  delay(300);
+
   testFins();
 
   // flash_.setup(16777216, false);
-  sdmc_.setup();
+  if (!sdmc_.setup())
+    initialization_error = true;
 
-  Serial.println("Set up FCMS");
   Wire.begin();
-  transceiver.setup();
-  imu_.setup();
-  imu9dof_.setup();
-  baro_.setup();
-  baro388_.setup();
+  if (!imu_.setup())
+    initialization_error = true;
+  if (!imu9dof_.setup())
+    initialization_error = true;
+  if (!baro_.setup())
+    initialization_error = true;
+  if (!baro388_.setup())
+    initialization_error = true;
   gps_.setup();
+  transceiver.setup();
   fins.roll_setp = 0;
   fins.pitch_setp = 0;
   fins.yaw_setp = 0;
@@ -278,7 +282,7 @@ void FCMS::goToState(STATE state)
     break;
   case LANDED:
     setColor(255, 255, 255);
-    buzzer.playMelody(MelodyType::LANDED_M);
+    // buzzer.playMelody(MelodyType::LANDED_M);
     major_events_q_.push({"LANDED", millis()});
     // sdmc_.writeLOG("LANDED");
     events.setLanded(true);
@@ -564,6 +568,7 @@ Response FCMS::processCommand(const Command &command)
     break;
   case VEHICLE_ARM:
     parachute.arm();
+    events.setMissionTime(static_cast<uint16_t>(millis() / 1000));
     break;
   case ENABLE_TAKEOFF_DETECTION:
   {
@@ -687,73 +692,37 @@ void FCMS::step()
   if (time_now_ms - commsMillis >= commsInterval)
   {
     commsMillis = time_now_ms;
-    // Serial.print(getState());
-    // Serial.print(",\"accX\":");
-    // Serial.print(imu_.getAccelX(), 2);
-    // Serial.print(",\"accY\":");
-    // Serial.print(imu_.getAccelY(), 2);
-    // Serial.print(",\"accZ\":");
-    // Serial.print(imu_.getAccelZ(), 2);
-    // Serial.print(" {\"roll1\":");
-    // Serial.print(sensor_data_.rollRate1, 2);
-    // Serial.print(",\"pitch1\":");
-    // Serial.print(sensor_data_.pitchRate1, 2);
-    // Serial.print(",\"yaw1\":");
-    // Serial.print(sensor_data_.yawRate1, 2);
-    // Serial.print(",\"roll2\":");
-    // Serial.print(sensor_data_.roll2, 2);
-    // Serial.print(",\"pitch2\":");
-    // Serial.print(sensor_data_.pitch2, 2);
-    // Serial.print(",\"yaw2\":");
-    // Serial.print(sensor_data_.yaw2, 2);
-    // Serial.print(",\"lat\":");
-    // Serial.print(sensor_data_.lat, 6);
-    // Serial.print(",\"lon\":");
-    // Serial.print(sensor_data_.lon, 6);
-    // Serial.print(",\"alt1\":");
-    // Serial.print(sensor_data_.alt1, 1);
-    // Serial.print(",\"alt2\":");
-    // Serial.print(sensor_data_.alt2, 1);
-    // Serial.print(",\"A1\":");
-    // Serial.print(baro_.getMaxApogee(), 2);
-    // Serial.print(",\"A2\":");
-    // Serial.print(baro388_.getMaxApogee(), 2);
-    // Serial.print(",\"state\":");
-    // Serial.print(state);
-    // Serial.println("}");
-    //   transceiver.receive();
-    server.receive();
+    transceiver.receive();
+    // server.receive();
 
-    //   // Serial.print(Serial3.available());
-
-    //   if (transceiver.hasCommand())
-    //   {
-    //     auto packetRx = transceiver.popCommand();
-    //     // process command
-    //     Serial.println("Received command\n\n\n\n\n\n\n");
-    //     // send response
-    //     Response response = processCommand(packetRx.command);
-    //     response.commandSeqId = packetRx.sequenceId;
-    //     Serial.println(response.commandSeqId);
-
-    //     transceiver.sendResponse(GROUND_STATION_ADDR, response);
-    //   }
-    if (server.hasCommand())
+    if (transceiver.hasCommand())
     {
-      auto packetRx = server.popCommand();
+      auto packetRx = transceiver.popCommand();
       // process command
-      Serial.printf("Received command: %d\n", packetRx.command.commandId);
+      Serial.println("Received command\n\n\n\n\n\n\n");
       // send response
       Response response = processCommand(packetRx.command);
       response.commandSeqId = packetRx.sequenceId;
       Serial.println(response.commandSeqId);
 
-      server.sendResponse(GROUND_STATION_ADDR, response);
+      transceiver.sendResponse(GROUND_STATION_ADDR, response);
     }
-    // transceiver.sendTelemetry(GROUND_ADDR, tel);
+    // if (server.hasCommand())
+    // {
+    //   auto packetRx = server.popCommand();
+    //   // process command
+    //   Serial.printf("Received command: %d\n", packetRx.command.commandId);
+    //   // send response
+    //   Response response = processCommand(packetRx.command);
+    //   response.commandSeqId = packetRx.sequenceId;
+    //   Serial.println(response.commandSeqId);
+
+    //   // server.sendResponse(GROUND_STATION_ADDR, response);
+    // }
     Telemetry tel = mapTelemetry();
     sdmc_.logTelemetry(tel);
-    server.sendTelemetry(GROUND_ADDR, tel);
+    transceiver.sendTelemetry(GROUND_ADDR, tel);
+    // server.sendTelemetry(GROUND_ADDR, tel);
   }
   if ((time_now_ms - commitMillis >= commitInterval) && dataLogingStarted)
   {
@@ -884,7 +853,7 @@ void FCMS::updateState()
     {
       // delay(2000);
       // commitFlash();
-      commitSDMC();
+      // commitSDMC();
       sdmc_.closeLOG();
       dataWrittenToSD = true;
       events.setLoggedToSD(true);
@@ -950,6 +919,7 @@ Telemetry FCMS::mapTelemetry()
   telemetry.flags.landed = events.getLanded();
   telemetry.flags.parachute_fired = events.getParachuteFired();
   telemetry.flags.logged_to_sd = events.getLoggedToSD();
+  telemetry.flags.critical = initialization_error;
 
   telemetry.yaw_setp = static_cast<int16_t>(fins.yaw_setp * 10);
   telemetry.pitch_setp = static_cast<int16_t>(fins.pitch_setp * 10);
@@ -957,7 +927,7 @@ Telemetry FCMS::mapTelemetry()
 
   telemetry.parachuteDeploymentTime = events.getParachuteDeployedTime();
   telemetry.takeoffDetectedTime = events.getTakeoffDetectedTime();
-  telemetry.event2_time = events.getEvent2Time();
+  telemetry.event2_time = events.getMissionTime();
 
   return telemetry;
 }

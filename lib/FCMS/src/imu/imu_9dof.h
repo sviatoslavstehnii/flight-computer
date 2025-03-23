@@ -52,7 +52,7 @@ public:
   IMU9DOF(const IMU9DOF &) = delete;
   IMU9DOF &operator=(const IMU9DOF &) = delete;
 
-  void setup();
+  bool setup();
   void calibrate();
   void calibrateGyro();
   void calibrateAccel(float xc, float yc, float zc);

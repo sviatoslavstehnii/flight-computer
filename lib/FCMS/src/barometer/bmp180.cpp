@@ -19,14 +19,16 @@ void BMP180::calibrate()
   // that is equal to 101500 Pascals.
 }
 
-void BMP180::setup()
+bool BMP180::setup()
 {
   if (!bmp_.begin()) {
     Serial.println("Could not find a valid BMP180 sensor, check wiring!");
+    return false;
     // while (1) {}
   }
 
   calibrate();
+  return true;
 }
 
 void BMP180::printAltitude()

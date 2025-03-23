@@ -1,6 +1,6 @@
 #include "imu.h"
 
-void IMU::setup()
+bool IMU::setup()
 {
   // assume that Wire.begin() is already executed
   Wire.beginTransmission(0x68);
@@ -27,6 +27,7 @@ void IMU::setup()
   Wire.endTransmission();
 
   calibrate();
+  return true;
 }
 
 // currently prints roll, pitch, yaw

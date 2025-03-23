@@ -20,7 +20,7 @@ private:
     FlightEventStatus guidance_test = INACTIVE;
     uint16_t takeoffDetectedTime = 0;
     uint16_t parachuteDeployedTime = 0;
-    uint16_t event2Time = 0;
+    uint16_t missionTime = 0;
     // bool FlightEventStatus
 
 public:
@@ -57,8 +57,8 @@ public:
     void setParachuteDeployedTime(uint16_t value) { parachuteDeployedTime = value; }
     uint16_t getParachuteDeployedTime() { return parachuteDeployedTime; }
 
-    void setEvent2Time(uint16_t value) { event2Time = value; }
-    uint16_t getEvent2Time() { return event2Time; }
+    void setMissionTime(uint16_t value) { missionTime = value; }
+    uint16_t getMissionTime() { return missionTime; }
 
     void clear()
     {
@@ -73,6 +73,6 @@ public:
         guidance_test = INACTIVE;
         takeoffDetectedTime = 0;
         parachuteDeployedTime = 0;
-        event2Time = 0;
+        missionTime = 0;
     }
 };

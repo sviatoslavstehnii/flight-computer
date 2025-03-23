@@ -1,3 +1,6 @@
+#ifndef MY_QUEUE_T_H
+#define MY_QUEUE_T_H
+
 #include <queue>
 
 
@@ -37,3 +40,5 @@ private:
     std::queue<T> queue_;
     size_t max_size;
 };
+
+#endif

@@ -1,5 +1,5 @@
 #include "flash/flash.h"
-#include "sdmc/sdmc.h"
+#include "blackbox/blackbox.h"
 #include "ina/ina.h"
 // #include "comms/transceiver.h"
 
@@ -30,7 +30,7 @@ class GSMS
 {
 private:
   Flash flash_;
-  SDMC sdmc_{};
+  Blackbox sdmc_{};
   // SoftwareSerial mySerial{15, 14};
   Transceiver lora{Serial3, GROUND_ADDR};
   Transceiver server{Serial1, GROUND_ADDR};

@@ -1,11 +1,11 @@
 #include "imu_9dof.h"
 
-void IMU9DOF::setup()
+bool IMU9DOF::setup()
 {
   if (!bno_.begin())
   {
     Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    // while(1);
+    return false;
   }
   else
   {
@@ -15,6 +15,7 @@ void IMU9DOF::setup()
   bno_.setMode(OPERATION_MODE_NDOF);
 
   // calibrate();
+  return true;
 }
 
 void IMU9DOF::printGyroData()

@@ -1,6 +1,6 @@
-#include "sdmc.h"
+#include "blackbox.h"
 
-void SDMC::setup()
+bool Blackbox::setup()
 {
   if (!SD.begin(chipSelect))
   {
@@ -9,15 +9,17 @@ void SDMC::setup()
     Serial.println("2. is your wiring correct?");
     Serial.println("3. did you change the chipSelect pin to match your shield or module?");
     Serial.println("Note: press reset button on the board and reopen this Serial Monitor after fixing your issue!");
+    return false;
   }
   else
   {
     Serial.println("SD card initialization done.");
     LOG = SD.open("TELEMETRY.txt", FILE_WRITE);
   }
+  return true;
 }
 
-bool SDMC::write(const char *filename, const char *text)
+bool Blackbox::write(const char *filename, const char *text)
 {
   File f = SD.open(filename, FILE_WRITE);
   if (f)
@@ -31,7 +33,7 @@ bool SDMC::write(const char *filename, const char *text)
   return false;
 }
 
-bool SDMC::logTelemetry(const Telemetry &telemetry)
+bool Blackbox::logTelemetry(const Telemetry &telemetry)
 {
   if (LOG)
   {
@@ -48,7 +50,7 @@ bool SDMC::logTelemetry(const Telemetry &telemetry)
   return false;
 }
 
-void SDMC::closeLOG()
+void Blackbox::closeLOG()
 {
   if (LOG)
   {
@@ -57,7 +59,7 @@ void SDMC::closeLOG()
   }
 }
 
-bool SDMC::read(const char *filename)
+bool Blackbox::read(const char *filename)
 {
   File f = SD.open(filename);
   if (f)
@@ -74,7 +76,7 @@ bool SDMC::read(const char *filename)
   return false;
 }
 
-void SDMC::remove(const char *path)
+void Blackbox::remove(const char *path)
 {
   if (SD.exists(path))
   {

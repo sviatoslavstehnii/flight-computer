@@ -20,9 +20,9 @@ class BMP180: Barometer {
     BMP180(const BMP180&) = delete;
     BMP180& operator=(const BMP180&) = delete;
 
-    void setup() override;
+    bool setup() override;
 
-    void printAltitude() override;
+    void printAltitude();
     float getAltitude() override;
   
 };

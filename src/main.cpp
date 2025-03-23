@@ -51,17 +51,17 @@ void setup()
   // }
 
   Serial3.begin(115200);
-  delay(3000);
-  while(true){
-    if(Serial3.available())
-    {
-      Serial.write(Serial3.read());
-    }
-    if(Serial.available()){
-      Serial3.write(Serial.read());
-    }
-    delay(5);
-  }
+  // delay(3000);
+  // while(true){
+  //   if(Serial3.available())
+  //   {
+  //     Serial.write(Serial3.read());
+  //   }
+  //   if(Serial.available()){
+  //     Serial3.write(Serial.read());
+  //   }
+  //   delay(5);
+  // }
 
   fcms.setup();
 }

@@ -22,8 +22,8 @@ private:
   bool hitl = false;
   uint32_t start_time = 0;
   uint32_t time_now = 0;
-  uint32_t climb_duration = 11000;
-  uint32_t decline_duration = 30000;
+  uint32_t climb_duration = 11;
+  uint32_t decline_duration = 30;
   float max_alt = 650;
   float last_alt = 0;
 #endif
@@ -35,12 +35,12 @@ public:
   BMP280(const BMP280 &) = delete;
   BMP280 &operator=(const BMP280 &) = delete;
 
-  void setup() override;
-  void calibrate();
+  bool setup() override;
+  bool calibrate();
 
   void update();
 
-  void printAltitude() override;
+  void printAltitude();
   float getAltitude() override;
 
   bool getApogeeDetected() { return apogeeDetected; }
@@ -58,6 +58,10 @@ public:
     hitl = true;
     start_time = 0;
   }
-  void stop_hitl() { hitl = false; }
+  void stop_hitl()
+  {
+    hitl = false;
+    climbing = true;
+  }
 #endif
 };

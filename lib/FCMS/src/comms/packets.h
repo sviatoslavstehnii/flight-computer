@@ -97,20 +97,21 @@ public:
 
 struct FlagDefs
 {
-    bool pyro1_armed = 0;
-    bool pyro1_cont = 0;
-    bool pyro1_fire = 0;
-    bool pyro2_armed = 0;
-    bool pyro2_cont = 0;
-    bool pyro2_fire = 0;
-    bool pyro3_armed = 0;
-    bool pyro3_cont = 0;
-    bool pyro3_fire = 0;
-    bool liftoff = 0;
-    bool apogee = 0;
-    bool landed = 0;
-    bool parachute_fired = 0;
-    bool logged_to_sd = 0;
+    bool pyro1_armed = false;
+    bool pyro1_cont = false;
+    bool pyro1_fire = false;
+    bool pyro2_armed = false;
+    bool pyro2_cont = false;
+    bool pyro2_fire = false;
+    bool pyro3_armed = false;
+    bool pyro3_cont = false;
+    bool pyro3_fire = false;
+    bool liftoff = false;
+    bool apogee = false;
+    bool landed = false;
+    bool parachute_fired = false;
+    bool logged_to_sd = false;
+    bool critical = false;
 };
 
 struct Telemetry
